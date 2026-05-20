@@ -130,6 +130,11 @@ Notes on what shipped:
 
 Infrastructure shipped alongside: brightness control (`[`/`]`), tab-strip header, shared empty/loading/error widgets, `Panel::handle_key` for per-panel keys, `braille_aspect_bounds` for aspect-correct Canvas panels.
 
+### glance UI sweep backlog
+
+Polish items to batch into a dedicated pass over panel layouts (not blocking):
+- `water` — center the progress bar in the true vertical middle and refine the bar/text balance. Bar was moved above the text 2026-05-20 as a quick pass; revisit for exact centering and spacing.
+
 ---
 
 ## Still on the roadmap
