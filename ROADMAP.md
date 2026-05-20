@@ -115,8 +115,8 @@ Reads `~/projects/.dashboard-roadmap.md` and renders the suite as a navigable vi
 
 glance ships as one binary; new visualizations are added as Panel-trait impls registered in `default_registry()`. Status is per-panel inside this binary.
 
-**Built (18 panels, as of 2026-05-20):**
-`cpu` `mem` `net` `disk` `ping` `commits` `peon` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `water` `mascot`
+**Built (22 panels, as of 2026-05-20):**
+`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `peon` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `water` `mascot` `starfield`
 (plus `battery` — built but unregistered; no battery on the dev box. One-line registry edit to enable on a laptop.)
 
 Notes on what shipped:
@@ -143,12 +143,9 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 - **Migration**: drop `peon` and `water`; import existing peon-ping state on first run.
 
 ### glance system/hardware panels
-- `loadavg` — 1/5/15 min load gauges + 24h sparkline (/proc/loadavg)
 - `io` — per-disk read/write throughput sparklines (/proc/diskstats deltas)
 - `conn` — TCP connection count by state, BarChart (`ss -s` or /proc/net/tcp)
 - `gpu` — usage + memory + temp gauges (nvidia-smi / rocm, graceful absent)
-- `fans` — RPM gauge per fan (/sys/class/hwmon)
-- `entropy` — available-entropy sparkline (/proc/sys/kernel/random/entropy_avail)
 
 ### glance network panels
 - `world-ping` — world Map with dots at known cloud regions, colored by RTT (distinct from `tsmap`, which plots Tailscale peers)
@@ -158,7 +155,7 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 - `timer` — pomodoro / countdown ring as a shrinking Canvas circle, with key controls
 - `music` — now-playing track marquee from MPRIS/playerctl
 - `waveform` — live mic-input waveform (Sparkline real-time, cpal audio dep)
-- `starfield` / `mandala` — pure decoration tiles (Canvas)
+- `mandala` — parametric Canvas decoration tile
 
 ### glance work / data panels
 - `emails-per-day` — inbox volume BarChart, zele-driven
@@ -177,11 +174,9 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 
 Everything remaining, ranked easiest → hardest to build. Tier reflects data-source complexity, new patterns/deps required, state management, and rough line count. Items within a tier are roughly equal.
 
-### Tier 1 — Trivial (≈1 hour; copy a known pattern, local data)
-- `loadavg` — read one /proc file; gauges + sparkline; clone of `mem`. ~80 lines.
-- `entropy` — read one /proc file; single sparkline. ~60 lines.
-- `starfield` — Canvas points + simple twinkle RNG; no data source. ~80 lines.
-- `fans` — /sys/class/hwmon gauges; like `temp` but path discovery is fiddly. ~120 lines.
+### Tier 1 — Trivial — ✅ ALL BUILT (2026-05-20)
+- ~~`loadavg`~~ ✅  ~~`entropy`~~ ✅  ~~`starfield`~~ ✅  ~~`fans`~~ ✅
+- Next-cheapest now living in Tier 2.
 
 ### Tier 2 — Easy (≈half day; known pattern + one new wrinkle)
 - `io` — parse /proc/diskstats deltas; mirrors `net`'s /proc/net/dev approach. ~150 lines.
