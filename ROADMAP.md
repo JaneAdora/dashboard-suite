@@ -143,8 +143,6 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 - **Migration**: drop `peon` and `water`; import existing peon-ping state on first run.
 
 ### glance system/hardware panels
-- `io` — per-disk read/write throughput sparklines (/proc/diskstats deltas)
-- `conn` — TCP connection count by state, BarChart (`ss -s` or /proc/net/tcp)
 - `gpu` — usage + memory + temp gauges (nvidia-smi / rocm, graceful absent)
 
 ### glance network panels
@@ -152,10 +150,8 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 - `traceroute` — Canvas line through ICMP/UDP hops to a destination
 
 ### glance time / decoration panels
-- `timer` — pomodoro / countdown ring as a shrinking Canvas circle, with key controls
 - `music` — now-playing track marquee from MPRIS/playerctl
 - `waveform` — live mic-input waveform (Sparkline real-time, cpal audio dep)
-- `mandala` — parametric Canvas decoration tile
 
 ### glance work / data panels
 - `emails-per-day` — inbox volume BarChart, zele-driven
@@ -179,10 +175,8 @@ Everything remaining, ranked easiest → hardest to build. Tier reflects data-so
 - Next-cheapest now living in Tier 2.
 
 ### Tier 2 — Easy (≈half day; known pattern + one new wrinkle)
-- `io` — parse /proc/diskstats deltas; mirrors `net`'s /proc/net/dev approach. ~150 lines.
-- `conn` — parse `ss -s` / /proc/net/tcp; BarChart by state. ~130 lines.
-- `mandala` — parametric Canvas animation; pure math, no data. ~120 lines.
-- `timer` — pomodoro state machine + Canvas circle + start/pause/reset keys (uses `handle_key`). Ephemeral state only. ~180 lines.
+glance panels: ✅ ALL BUILT (2026-05-20) — ~~`io`~~ ~~`conn`~~ ~~`mandala`~~ ~~`timer`~~
+Remaining = launcher binaries (separate repos, roam/wt scaffold):
 - `gst` *(launcher)* — git status/log via subprocess, exit-with-command. First new launcher binary bears scaffold cost (~250 lines), then cheaper.
 - `ssh` *(launcher)* — parse ~/.ssh/config, exit with `ssh <host>`. ~200 lines.
 - `note` *(launcher)* — dated journal files, exit to $EDITOR. ~200 lines.
