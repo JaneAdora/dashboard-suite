@@ -17,6 +17,12 @@ The shared scaffold (theme.rs, layout.rs, centered_rect, OSC 52 helper, footer-w
 
 ### Action-launcher widgets (exit-with-command pattern)
 
+**Dual-form (decided 2026-05-20):** every launcher below, plus the `mm` companion, ships in BOTH forms, built in parallel from one shared library crate:
+- **Standalone binary:** the classic launcher. Open, pick, exit-with-command (`RunOutcome::PrintAndExit` + OSC 52). Run from a shell or phone, e.g. `eval "$(gst)"`.
+- **glance panel:** an always-on tile of the same picker. A panel cannot exit-with-command (glance owns the process and quits only on `q`), so the panel form's action becomes copy-to-clipboard (OSC 52) and/or spawn (e.g. `tmux new-window`) instead of print-and-exit. Each launcher defines its own panel-mode action semantics.
+
+Shared library holds the data source, list model, filter, and render; the standalone `main.rs` and the glance `Panel` impl are thin wrappers over it. `mm` and the launchers are separate concerns but follow the same dual-form rule. Effort estimates below assume this shared-crate approach.
+
 ### 1. `gst` — Git status / log browser
 Pick a repo (auto-detect via `pwd` or arg), see status + recent log. Single-key actions: `c` checkout this commit, `d` print `git diff <sha>`, `b` branch list, `y` copy SHA, `r` revert hint. Pairs naturally with `wt`. **Data source:** `git2` crate or shell-out to `git`.
 
@@ -153,6 +159,7 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 
 ### glance time / decoration panels
 - `waveform` — live mic-input waveform (Sparkline real-time, cpal audio dep)
+- `missminutes` — animated Miss Minutes clock companion (Loki). Hand-drawn pixel-art character + big block-digit time, idle animation loop, hourly/quarter quips. Decoration sibling of `mascot` / `clock`. Shares its animation code with the standalone `mm` app (see separate binaries, Wave 0).
 
 ### glance work / data panels
 - `emails-per-day` — inbox volume BarChart, zele-driven
@@ -160,10 +167,30 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 - `issues` — GitHub assigned-issues tile, BarChart (`gh api`). (`prs` built.)
 - `standup` — auto-summary of today's git + claude + calendar activity
 
-### Suite — separate binaries (not glance panels), none built yet
+### Suite: launchers + companion (dual-form: standalone binary + glance panel), none built yet
+Each item ships as a standalone binary AND a glance panel from one shared crate (see Dual-form note above), built in parallel.
+- **Companion:** `mm`, Miss Minutes animated clock companion. ⭐ **Wave 0.** NOTE: a bash `mm` toggle already exists (`~/.local/bin/mm` -> `~/Projects/tinker/miss-minutes/scripts/mm`); review that project for prior art and resolve the name collision before building the Rust version.
 - **Action launchers:** `gst` (git status/log), `ssh` (host picker), `note` (journal), `clip` (clipboard ring), `op` (1Password), `gh` (PR triage), `proc` (process killer), `port` (listening ports)
-- **Tiles:** `cal` (calendar agenda), `tasks` (Monday + local todo) — could become glance panels instead of standalone binaries
-- **Meta:** `atlas` — self-referential roadmap visualizer (Kanban / Wave / Network views; parses this doc)
+- **Meta:** `atlas`, self-referential roadmap visualizer (Kanban / Wave / Network views; parses this doc)
+
+Tiles `cal` / `tasks` stay separate (Tier 4, skai-bridge dependent): they are live tiles, not pick-and-exit launchers.
+
+### Launcher candidates: machine audit (2026-05-20)
+Grounding the brainstorm in what is actually installed on muthur (this dev box):
+- **git / gh:** `gh` is a wrapper; `gst` and `gh` launchers are solid. ~16 repos under `~/projects`, more under `~/Projects`.
+- **docker:** 7 containers running (habitica stack, guacamole stack, limitless-bot). A `docker` launcher (start/stop/logs/exec/shell-in) is genuinely useful here. NEW candidate.
+- **systemctl --user:** 41 user units plus system units. A `svc` launcher (status/restart/logs via journalctl) is viable; user units are mostly autostart noise, system units more useful. NEW candidate.
+- **clip:** `cliphist` ALREADY runs as the clipboard daemon (existing `clipboard-picker` = `cliphist list | wofi | wl-copy`). So `clip` wraps `cliphist list/decode`: no daemon to build. Resolves the old "needs a watcher" open question. Wayland gives `wl-copy`/`wl-paste` natively, plus OSC 52 for SSH/mobile.
+- **op:** wrapper present (`skai-agent-v2` token); `op` launcher as planned.
+- **proc / port:** `sysinfo` + `ss`; `fzf` present for a shell-only fallback if ever wanted.
+- **ssh:** WEAK on this box: no `~/.ssh/config`, only 6 `known_hosts` plus key files. Reframe around `known_hosts` + a hand-kept host list, or deprioritize.
+- **task runners:** only 4 Cargo.toml + 2 package.json under `~/projects` (depth 3), no justfiles/Makefiles. A `run` launcher (cargo/npm scripts) is low surface now; defer.
+- **DBs:** `psql` + `redis-cli` present (postgres/mongo/redis via the docker stacks). A `db` query launcher is possible but niche.
+- Also present: `gcloud` (snap), `flatpak`/`snap`/`apt`, `bun`/`pnpm`/`npm`/`uv`/`pipx`, `nvim`/`vim`, `just`/`make`, `gpg`, `curl`, `jq`, `rg`/`fd`/`bat`/`eza`.
+
+Custom `~/.local/bin` wrappers worth knowing: `zele` (gmail/slack/monday bridge), `skai`/`mu` (MUTHUR), `hermes`, `claude`/`claudesp`/`jcode`/`kimi` (agent CLIs), `g2md`/`hscms` (content), `roam`/`wt`/`glance` (the suite), `xurl`.
+
+New candidates surfaced by the audit (for brainstorm): **`docker`**, **`svc`** (systemd), and a possible **`agent`/session** launcher over the many AI-CLI wrappers (overlaps `recall`).
 
 ---
 
@@ -189,6 +216,7 @@ Remaining glance panel in this tier:
 - `emails-per-day` — DEFERRED to the skai/zele bridge work (zele has no JSON mode + slow cold start). See cross-cutting note.
 
 Remaining launcher binaries (separate repos):
+- `mm` *(companion)* — Miss Minutes standalone; pixel-art animation loop + block-digit clock, idle/hourly quips. New animation-render work over the shared scaffold; the `missminutes` glance panel reuses it. ~250 lines. ⭐ **Build first regardless of tier (Wave 0).**
 - `proc` *(launcher)* — process killer, two-step confirm, sysinfo. ~250 lines.
 - `port` *(launcher)* — `ss` parse + kill; Linux-only. ~200 lines.
 - `op` *(launcher)* — 1Password `op` CLI; secret handling + auto-clear; security-sensitive. ~220 lines.
@@ -218,6 +246,9 @@ Remaining launcher binaries (separate repos):
 - **Original 10 separate viz binaries** (`cpu`, `mem`, `disk-viz`, `net-graph`, `ping-graph`, `battery`, `peon-log-viz`, `commits-heatmap`, `emails-per-day`, `activity-clock`) — **merged into `glance`** as panels. Saves 9 binaries' worth of duplicate scaffolding and gives a unified dashboard.
 
 ### Build order recommendation
+
+**Wave 0 — highest priority:**
+`mm` (Miss Minutes) standalone app — animated clock companion. Build first, ahead of everything else. The `missminutes` glance panel reuses its animation code, so this also seeds that panel.
 
 **Wave 1 — action launchers** (smallest data sources, biggest day-to-day wins):
 `roam` (done) → `gst` → `ssh` → `note` → `clip`
