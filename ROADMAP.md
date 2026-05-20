@@ -143,20 +143,16 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 - **Migration**: drop `peon` and `water`; import existing peon-ping state on first run.
 
 ### glance system/hardware panels
-- `gpu` — usage + memory + temp gauges (nvidia-smi / rocm, graceful absent)
 
 ### glance network panels
-- `world-ping` — world Map with dots at known cloud regions, colored by RTT (distinct from `tsmap`, which plots Tailscale peers)
-- `traceroute` — Canvas line through ICMP/UDP hops to a destination
 
 ### glance time / decoration panels
-- `music` — now-playing track marquee from MPRIS/playerctl
 - `waveform` — live mic-input waveform (Sparkline real-time, cpal audio dep)
 
 ### glance work / data panels
 - `emails-per-day` — inbox volume BarChart, zele-driven
 - `activity-clock` — radial 24h clock with calendar event arcs (Canvas, skai cal)
-- `prs` / `issues` — GitHub triage tiles, BarChart (`gh api`)
+- `issues` — GitHub assigned-issues tile, BarChart (`gh api`). (`prs` built.)
 - `standup` — auto-summary of today's git + claude + calendar activity
 
 ### Suite — separate binaries (not glance panels), none built yet
@@ -182,12 +178,12 @@ Remaining = launcher binaries (separate repos, roam/wt scaffold):
 - `note` *(launcher)* — dated journal files, exit to $EDITOR. ~200 lines.
 
 ### Tier 3 — Moderate (≈1 day; new data source or external subprocess)
-- `gpu` — nvidia-smi/rocm subprocess; variable output formats; graceful absent. ~180 lines.
-- `world-ping` — geoip table + ping subprocesses + Map widget; combines `ping` + `tsmap` patterns. ~250 lines.
-- `traceroute` — subprocess traceroute parse + Canvas line drawing; hop parsing fiddly. ~220 lines.
-- `music` — MPRIS via playerctl subprocess; marquee scroll. ~180 lines.
-- `emails-per-day` — zele CLI subprocess (slow cold start), aggregate by day, BarChart. ~180 lines.
-- `prs` / `issues` — `gh api` subprocess, JSON parse, BarChart. ~200 lines.
+glance panels: ✅ MOSTLY BUILT (2026-05-20) — ~~`gpu`~~ ~~`world-ping`~~ ~~`traceroute`~~ ~~`music`~~ ~~`prs`~~
+Remaining glance panel in this tier:
+- `issues` — GitHub assigned-issues tile, BarChart (`gh api`). Trivial now that `prs` exists (same scaffold). ~120 lines.
+- `emails-per-day` — DEFERRED to the skai/zele bridge work (zele has no JSON mode + slow cold start). See cross-cutting note.
+
+Remaining launcher binaries (separate repos):
 - `proc` *(launcher)* — process killer, two-step confirm, sysinfo. ~250 lines.
 - `port` *(launcher)* — `ss` parse + kill; Linux-only. ~200 lines.
 - `op` *(launcher)* — 1Password `op` CLI; secret handling + auto-clear; security-sensitive. ~220 lines.
