@@ -1156,4 +1156,5 @@ cd ~/projects/glance && git add -A && git commit -m "test: verify launchers pane
 - `cargo test` passes in the launchers workspace (clipboard, summary, filter, list, gst source, gst summary_cmd).
 - `gst` installed; interactive picker works; `o` prints `cd <path>`; `y` prints a SHA; `--summary --json` emits a valid envelope.
 - glance shows the `launchers` palette (12 entries) + a live `gst` card, single-column at 32 cols.
+- Review-driven additions to `launcher-core` (use these in later waves): `tui::TerminalGuard` (RAII raw-mode + alt-screen restore so the event loop is safe on `?` error paths) and `Selection::selected_index()` (empty-list-safe). Every launcher's `app.rs::run()` should run its event loop inside a `TerminalGuard` scope and call `exit::finish` only after the guard drops.
 - This stabilizes the `launcher-core` API. Waves 1 to 3 (clip/op/proc, docker/svc/hub, ssh/note/gh/port/agent) get their own plans, each adding a `source.rs` + `--summary --json` + interactive `app.rs` per launcher and a card in the glance panel.
