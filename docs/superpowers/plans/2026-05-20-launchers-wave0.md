@@ -25,7 +25,7 @@
     src/filter.rs                 # fuzzy subsequence match + filter_indices
     src/theme.rs                  # Rep Cap palette
     src/exit.rs                   # RunOutcome + print_and_exit
-    src/list.rs                   # ListState<T> selection helper
+    src/list.rs                   # Selection (list cursor) helper
     src/ui.rs                     # single_column layout, footer + toast
   gst/
     Cargo.toml
@@ -457,11 +457,11 @@ pub fn finish(outcome: RunOutcome) {
 ```rust
 //! Generic selection state over a filtered list of items.
 
-pub struct ListState {
+pub struct Selection {
     pub selected: usize,
     pub len: usize,
 }
-impl ListState {
+impl Selection {
     pub fn new(len: usize) -> Self { Self { selected: 0, len } }
     pub fn set_len(&mut self, len: usize) {
         self.len = len;
@@ -480,7 +480,7 @@ mod tests {
     use super::*;
     #[test]
     fn clamps_navigation() {
-        let mut s = ListState::new(3);
+        let mut s = Selection::new(3);
         s.up(); assert_eq!(s.selected, 0);
         s.down(); s.down(); s.down(); s.down(); assert_eq!(s.selected, 2);
         s.set_len(1); assert_eq!(s.selected, 0);
@@ -764,7 +764,7 @@ use crossterm::event::{self, Event, KeyCode};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use launcher_core::exit::{finish, RunOutcome};
 use launcher_core::filter::filter_indices;
-use launcher_core::list::ListState;
+use launcher_core::list::Selection;
 use launcher_core::theme;
 use launcher_core::ui::{render_footer, three_row, Toast};
 use ratatui::text::{Line, Span};
@@ -777,7 +777,7 @@ const FOOTER: &str = "j/k move  / filter  o cd  y copy sha  q quit";
 struct State {
     repos: Vec<Repo>,
     visible: Vec<usize>,
-    list: ListState,
+    list: Selection,
     query: String,
     searching: bool,
     toast: Toast,
@@ -787,7 +787,7 @@ impl State {
     fn new() -> Self {
         let repos = discover_repos();
         let visible: Vec<usize> = (0..repos.len()).collect();
-        let list = ListState::new(visible.len());
+        let list = Selection::new(visible.len());
         Self { repos, visible, list, query: String::new(), searching: false, toast: Toast::new() }
     }
     fn refilter(&mut self) {
