@@ -38,8 +38,8 @@ Solves the biggest mobile pain: "I copied something on my phone and now I want i
 ### 5. `net` — Connection / tunnel status (NEW from UX review)
 One screen on the dashboard: current IP, ping latency to a few configured hosts, Tailscale peers (`tailscale status --json`), WiFi vs cell signal hint. Single-key `r` refresh, `c` copy IP, `t` toggle Tailscale (if writable). Useful constantly on a phone. **Data source:** `ip`, `ping`, `tailscale status`.
 
-### 6. `op` — 1Password vault picker
-Browse vaults/items via the `op` wrapper at `~/.local/bin/op`. Single-key `y` copy password (OSC 52, auto-clears after 30s if possible), `Y` copy whole field, `e` reveal in preview modal. Respects the existing `skai-agent-v2` token. **Data source:** `op item list` JSON.
+### 6. `1p` — 1Password vault picker (crate `onepw`)
+Browse vaults/items via the 1Password CLI. Single-key `y` copy password (OSC 52, auto-clears after 30s if possible), `Y` copy whole field, `e` reveal in preview modal. Respects the existing `skai-agent-v2` token. **Data source:** `op item list` JSON, resolved by absolute path (never bare `op`). **Renamed from `op` to `1p` on 2026-05-20:** a cargo bin target named `op` clobbered `~/.local/bin/op`, then `Command::new("op")` self-recursed into a fork bomb (~16.8k procs, OOM, hard hang). Crate is `onepw`, installed as the command `1p`; the CLI is invoked by absolute path so it can never recurse into itself again.
 
 ### 7. `proc` — Process viewer / killer
 htop-lite. List processes with CPU/mem, single-key `k` send SIGTERM, `K` SIGKILL, `9` SIGKILL by PID prompt, `/` filter by command. Two-step confirm for kills (like `wt`'s `x/X` pattern). **Data source:** `sysinfo` crate.
@@ -176,7 +176,7 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 ### Suite: launchers + companion (dual-form: standalone binary + glance panel), none built yet
 Each item ships as a standalone binary AND a glance panel from one shared crate (see Dual-form note above), built in parallel.
 - **Companion:** `mm`, Miss Minutes animated clock companion. ⭐ **Wave 0.** NOTE: a bash `mm` toggle already exists (`~/.local/bin/mm` -> `~/Projects/tinker/miss-minutes/scripts/mm`); review that project for prior art and resolve the name collision before building the Rust version.
-- **Action launchers:** `gst` (git status/log), `ssh` (host picker), `note` (journal), `clip` (clipboard ring), `op` (1Password), `gh` (PR triage), `proc` (process killer), `port` (listening ports)
+- **Action launchers:** `gst` (git status/log), `ssh` (host picker), `note` (journal), `clip` (clipboard ring), `1p` (1Password, crate `onepw`), `gh` (PR triage), `proc` (process killer), `port` (listening ports)
 - **Meta:** `atlas`, self-referential roadmap visualizer (Kanban / Wave / Network views; parses this doc)
 
 Tiles `cal` / `tasks` stay separate (Tier 4, skai-bridge dependent): they are live tiles, not pick-and-exit launchers.
@@ -187,7 +187,7 @@ Grounding the brainstorm in what is actually installed on muthur (this dev box):
 - **docker:** 7 containers running (habitica stack, guacamole stack, limitless-bot). A `docker` launcher (start/stop/logs/exec/shell-in) is genuinely useful here. NEW candidate.
 - **systemctl --user:** 41 user units plus system units. A `svc` launcher (status/restart/logs via journalctl) is viable; user units are mostly autostart noise, system units more useful. NEW candidate.
 - **clip:** `cliphist` ALREADY runs as the clipboard daemon (existing `clipboard-picker` = `cliphist list | wofi | wl-copy`). So `clip` wraps `cliphist list/decode`: no daemon to build. Resolves the old "needs a watcher" open question. Wayland gives `wl-copy`/`wl-paste` natively, plus OSC 52 for SSH/mobile.
-- **op:** wrapper present (`skai-agent-v2` token); `op` launcher as planned.
+- **1p:** wrapper present (`skai-agent-v2` token); built as `1p` (crate `onepw`), renamed from `op` after the 2026-05-20 fork-bomb incident.
 - **proc / port:** `sysinfo` + `ss`; `fzf` present for a shell-only fallback if ever wanted.
 - **ssh:** WEAK on this box: no `~/.ssh/config`, only 6 `known_hosts` plus key files. Reframe around `known_hosts` + a hand-kept host list, or deprioritize.
 - **task runners:** only 4 Cargo.toml + 2 package.json under `~/projects` (depth 3), no justfiles/Makefiles. A `run` launcher (cargo/npm scripts) is low surface now; defer.
@@ -225,7 +225,7 @@ Remaining launcher binaries (separate repos):
 - `mm` *(companion)* — Miss Minutes standalone; pixel-art animation loop + block-digit clock, idle/hourly quips. New animation-render work over the shared scaffold; the `missminutes` glance panel reuses it. ~250 lines. ⭐ **Build first regardless of tier (Wave 0).**
 - `proc` *(launcher)* — process killer, two-step confirm, sysinfo. ~250 lines.
 - `port` *(launcher)* — `ss` parse + kill; Linux-only. ~200 lines.
-- `op` *(launcher)* — 1Password `op` CLI; secret handling + auto-clear; security-sensitive. ~220 lines.
+- `1p` *(launcher, crate `onepw`)* — 1Password `op` CLI; secret handling + auto-clear; security-sensitive. ~220 lines. ✅ Built (2026-05-20); renamed from `op`, CLI invoked by absolute path.
 - `clip` *(launcher)* — clipboard ring buffer; needs a watcher/daemon or OSC 52 inbound (design question). ~250 lines.
 
 ### Tier 4 — Hard (multi-day; new architecture, integration, or multi-source)
@@ -263,7 +263,7 @@ Remaining launcher binaries (separate repos):
 `cal` (smallest tile, validates pattern) → `tasks` → `glance` (the big one, but trait-based so panels can be added incrementally — ship with 3-4 panels, grow from there)
 
 **Wave 3 — auth-gated launchers**:
-`net` (could go earlier — partial tile too) → `op` → `gh`
+`net` (could go earlier — partial tile too) → `1p` (built) → `gh`
 
 **Wave 4 — specialized**:
 `proc`, `port` (Linux-only)
