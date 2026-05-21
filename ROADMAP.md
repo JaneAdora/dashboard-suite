@@ -145,7 +145,7 @@ Polish items to batch into a dedicated pass over panel layouts (not blocking):
 ### roam backlog
 
 Found while reviewing the launchers spec on mobile (2026-05-20):
-- File previewer needs UI improvements: clean up the preview pane and full-screen preview modal (layout, wrapping, readability).
+- File previewer: the full-screen preview modal is now full-width with line wrapping (2026-05-21), so wide content no longer crops. Remaining: tidy the inline preview pane (layout/readability).
 - Search is broken. The help modal advertises `R` recursive find (depth 3) but there is no `R` handler, and `/` only matches the current directory (jump-to-name, not a recursive find). Implement bounded-depth recursive find so search-from-a-parent works, and make the help match reality.
 
 ---
