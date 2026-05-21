@@ -63,7 +63,7 @@ cd ~/projects/launchers && git init
 ```toml
 [workspace]
 resolver = "2"
-members = ["launcher-core", "gst"]
+members = ["launcher-core"]   # gst added in Task 7
 
 [workspace.dependencies]
 ratatui = "0.29"
@@ -117,9 +117,7 @@ for m in clipboard summary filter theme exit list ui; do touch $m.rs; done
 - [ ] **Step 5: Verify the workspace is recognized**
 
 Run: `cd ~/projects/launchers && cargo build -p launcher-core`
-Expected: builds (warnings about empty modules are fine). gst is not built yet (no crate); that is added in Task 7.
-
-Note: `members` lists `gst`, which does not exist yet. Temporarily set `members = ["launcher-core"]` for this task, then restore `["launcher-core", "gst"]` in Task 7 Step 1.
+Expected: builds (warnings about empty modules are fine). gst is added in Task 7, which restores it to the workspace members.
 
 - [ ] **Step 6: Commit**
 
@@ -148,10 +146,13 @@ pub const OSC52_CAP: usize = 4096;
 /// Build the OSC 52 escape sequence for `data`. Returns (sequence, truncated).
 /// Caps the raw bytes at OSC52_CAP before base64 to stay under Termux/Blink limits.
 pub fn osc52_sequence(data: &str) -> (String, bool) {
-    let bytes = data.as_bytes();
-    let truncated = bytes.len() > OSC52_CAP;
-    let slice = if truncated { &bytes[..OSC52_CAP] } else { bytes };
-    let b64 = base64::engine::general_purpose::STANDARD.encode(slice);
+    let truncated = data.len() > OSC52_CAP;
+    // Back off to a char boundary so we never split a UTF-8 codepoint.
+    let mut end = data.len().min(OSC52_CAP);
+    while end > 0 && !data.is_char_boundary(end) {
+        end -= 1;
+    }
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&data.as_bytes()[..end]);
     (format!("\x1b]52;c;{b64}\x07"), truncated)
 }
 
@@ -1084,6 +1085,8 @@ In `~/projects/glance/src/panels/mod.rs`:
 - Add to `build_panel`'s match: `"launchers" => Box::new(launchers::LaunchersPanel::new()),`
 - Add `"launchers"` to `DEFAULT_ORDER` and `ALL_PANELS`.
 
+IMPORTANT: Jane has a custom `~/.config/glance/panels.toml` with an explicit `panels = [...]` list. When that file exists, glance shows ONLY the listed panels, so the code edits above will NOT make `launchers` appear in her running glance. Task 12 adds `"launchers"` to that config (the real end state); the `ALL_PANELS` edit still matters for `--list-panels`.
+
 - [ ] **Step 3: Build glance**
 
 Run: `cd ~/projects/glance && cargo build --release`
@@ -1101,25 +1104,46 @@ cd ~/projects/glance && git add src/panels/launchers.rs src/panels/mod.rs && git
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Install both and capture the panel**
+- [ ] **Step 1: Install gst and the updated glance**
 
 Run:
 ```bash
 ~/projects/launchers/install.sh
 cd ~/projects/glance && cargo build --release && install -m 0755 target/release/glance ~/.local/bin/glance
-tmux kill-session -t lx 2>/dev/null; tmux new-session -d -s lx -x 40 -y 40 'glance --only launchers 2>/dev/null || glance'
+```
+Expected: "installed gst" and a clean glance build.
+
+- [ ] **Step 2: Smoke-test the panel with a temporary launchers-only config**
+
+glance has no `--only` flag; it reads `~/.config/glance/panels.toml` and, when that file exists, shows only the listed panels. Temporarily make `launchers` the sole panel (slot 1) for the capture, then restore Jane's real config.
+
+```bash
+cp ~/.config/glance/panels.toml /tmp/glance-panels.bak
+echo 'panels = ["launchers"]' > ~/.config/glance/panels.toml
+tmux kill-session -t lx 2>/dev/null; tmux new-session -d -s lx -x 40 -y 40 'glance'
 sleep 3
 tmux capture-pane -t lx -p | sed -n '1,30p'
+tmux send-keys -t lx 'q'; sleep 0.3; tmux kill-session -t lx 2>/dev/null
+tmux new-session -d -s lx2 -x 32 -y 40 'glance'
+sleep 3
+tmux capture-pane -t lx2 -p | sed -n '1,30p'
+tmux send-keys -t lx2 'q'; sleep 0.3; tmux kill-session -t lx2 2>/dev/null
+cp /tmp/glance-panels.bak ~/.config/glance/panels.toml
+```
+Expected: the `launchers` panel lists all 12 entries single-column, and the `gst · N dirty` card shows a count matching `gst --summary --json`. Readable at 32 cols.
+
+- [ ] **Step 3: Add `launchers` to Jane's real config (end state)**
+
+Append `"launchers"` to the `panels = [...]` list in `~/.config/glance/panels.toml` (e.g. after `"mascot"`), then confirm it is reachable:
+```bash
+tmux kill-session -t lx 2>/dev/null; tmux new-session -d -s lx -x 120 -y 40 'glance'
+sleep 1; tmux send-keys -t lx 'p'; sleep 2
+tmux capture-pane -t lx -p | grep -i launchers | head -3
 tmux send-keys -t lx 'q'; tmux kill-session -t lx 2>/dev/null
 ```
-Expected: the `launchers` panel lists all 12 entries in a single column and the `gst · N dirty` card shows a real count (matching `gst --summary --json`).
+Expected: the launchers panel renders. (`p` from slot 1 should cycle to the last panel; if it does not wrap, press `n` to the end instead.)
 
-- [ ] **Step 2: Verify mobile width**
-
-Run: same capture at `-x 32`.
-Expected: palette still single-column and readable; the card line present (may be the only card row).
-
-- [ ] **Step 3: Final commit if any tweaks were needed**
+- [ ] **Step 4: Final commit if any tweaks were needed**
 
 ```bash
 cd ~/projects/glance && git add -A && git commit -m "test: verify launchers panel renders gst card" || echo "no changes"
