@@ -145,7 +145,7 @@ Polish items to batch into a dedicated pass over panel layouts (not blocking):
 ### roam backlog
 
 Found while reviewing the launchers spec on mobile (2026-05-20):
-- File previewer: the full-screen preview modal is now full-width with line wrapping (2026-05-21), so wide content no longer crops. Remaining: tidy the inline preview pane (layout/readability).
+- File previewer: full-screen modal is full-width + wraps (2026-05-21), and `.md` files render styled (headings, bold/italic, inline+fenced code, lists, blockquotes, rules) in both the pane and modal. Remaining: tidy the inline preview pane (layout/readability).
 - ✅ Recursive find shipped (2026-05-21): `R` walks the cwd to depth 3 (hidden-aware, symlink-safe, capped at 1000), shows matches with relative-path names + a `[find 'q': N]` header indicator; `Esc` clears. `/` remains the current-dir jump-filter.
 
 ---
