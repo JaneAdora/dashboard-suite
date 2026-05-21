@@ -121,8 +121,8 @@ Reads `~/projects/.dashboard-roadmap.md` and renders the suite as a navigable vi
 
 glance ships as one binary; new visualizations are added as Panel-trait impls registered in `default_registry()`. Status is per-panel inside this binary.
 
-**Built (22 panels, as of 2026-05-20):**
-`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `peon` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `water` `mascot` `starfield`
+**Built (23 panels, as of 2026-05-20):**
+`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `peon` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `water` `mascot` `starfield` `launchers`
 (plus `battery` — built but unregistered; no battery on the dev box. One-line registry edit to enable on a laptop.)
 
 Notes on what shipped:
@@ -133,6 +133,7 @@ Notes on what shipped:
 - `solar` — sun-position arc with NOAA sunrise equation, golden-hour highlights. (This was the roadmap's `sun`.)
 - `water` — local glasses tracker, `+`/`-`/`R` keys, midnight rollover. A single-activity prototype of `health`.
 - `mascot` — rotating hand-drawn pixel-art creature (6 poses). Pure decoration.
+- `launchers` — suite menu tile: a 16-row palette (every launcher + its hotkey) over live cards for `gst`/`clip`/`proc` (each polls `<bin> --summary --json` every 60s). Palette hotkeys copy the launcher name to the clipboard (OSC 52 + wl-copy); `proc`/`note` use `[P]`/`[N]` because lowercase `p`/`n` are the global panel-cycle keys.
 
 Infrastructure shipped alongside: brightness control (`[`/`]`), tab-strip header, shared empty/loading/error widgets, `Panel::handle_key` for per-panel keys, `braille_aspect_bounds` for aspect-correct Canvas panels.
 
@@ -173,10 +174,11 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 - `issues` — GitHub assigned-issues tile, BarChart (`gh api`). (`prs` built.)
 - `standup` — auto-summary of today's git + claude + calendar activity
 
-### Suite: launchers + companion (dual-form: standalone binary + glance panel), none built yet
-Each item ships as a standalone binary AND a glance panel from one shared crate (see Dual-form note above), built in parallel.
-- **Companion:** `mm`, Miss Minutes animated clock companion. ⭐ **Wave 0.** NOTE: a bash `mm` toggle already exists (`~/.local/bin/mm` -> `~/Projects/tinker/miss-minutes/scripts/mm`); review that project for prior art and resolve the name collision before building the Rust version.
-- **Action launchers:** `gst` (git status/log), `ssh` (host picker), `note` (journal), `clip` (clipboard ring), `1p` (1Password, crate `onepw`), `gh` (PR triage), `proc` (process killer), `port` (listening ports)
+### Suite: launchers + companion (dual-form: standalone binary + glance panel)
+Shared `launcher-core` crate (theme, list + scroll `Selection`, OSC 52, filter, `--summary --json` envelope) under `~/projects/launchers`; each launcher is a thin binary over it plus a glance palette/card entry. The glance `launchers` panel is the panel form (see above).
+- ✅ **Built (2026-05-20):** `gst` (git status/log), `clip` (clipboard ring, wraps `cliphist`), `1p` (1Password, crate `onepw`), `proc` (process killer). Plus the pre-existing OG launchers `roam` (dir nav), `wt` (worktrees), `recall` (cc-session browser) — all wired into the glance palette.
+- **Companion:** `mm`, Miss Minutes. A bash toggle exists (`~/.local/bin/mm` -> `~/Projects/tinker/miss-minutes/scripts/mm`) and is in the palette; the Rust animated version + `missminutes` glance panel are still to build.
+- **Remaining action launchers:** `ssh` (host picker), `note` (journal), `gh` (PR triage), `port` (listening ports), plus audit candidates `docker`, `svc`, `hub`, `agent`.
 - **Meta:** `atlas`, self-referential roadmap visualizer (Kanban / Wave / Network views; parses this doc)
 
 Tiles `cal` / `tasks` stay separate (Tier 4, skai-bridge dependent): they are live tiles, not pick-and-exit launchers.
@@ -211,7 +213,7 @@ Everything remaining, ranked easiest → hardest to build. Tier reflects data-so
 ### Tier 2 — Easy (≈half day; known pattern + one new wrinkle)
 glance panels: ✅ ALL BUILT (2026-05-20) — ~~`io`~~ ~~`conn`~~ ~~`mandala`~~ ~~`timer`~~
 Remaining = launcher binaries (separate repos, roam/wt scaffold):
-- `gst` *(launcher)* — git status/log via subprocess, exit-with-command. First new launcher binary bears scaffold cost (~250 lines), then cheaper.
+- ~~`gst` *(launcher)*~~ ✅ Built 2026-05-20 — git status/log; bore the `launcher-core` scaffold cost so the rest are cheaper.
 - `ssh` *(launcher)* — parse ~/.ssh/config, exit with `ssh <host>`. ~200 lines.
 - `note` *(launcher)* — dated journal files, exit to $EDITOR. ~200 lines.
 
@@ -222,11 +224,11 @@ Remaining glance panel in this tier:
 - `emails-per-day` — DEFERRED to the skai/zele bridge work (zele has no JSON mode + slow cold start). See cross-cutting note.
 
 Remaining launcher binaries (separate repos):
-- `mm` *(companion)* — Miss Minutes standalone; pixel-art animation loop + block-digit clock, idle/hourly quips. New animation-render work over the shared scaffold; the `missminutes` glance panel reuses it. ~250 lines. ⭐ **Build first regardless of tier (Wave 0).**
-- `proc` *(launcher)* — process killer, two-step confirm, sysinfo. ~250 lines.
+- `mm` *(companion)* — Miss Minutes standalone; pixel-art animation loop + block-digit clock, idle/hourly quips. New animation-render work over the shared scaffold; the `missminutes` glance panel reuses it. ~250 lines. (A bash `mm` already exists and is in the palette; the Rust version is still to build.)
+- ~~`proc` *(launcher)*~~ ✅ Built 2026-05-20 — process killer, two-step confirm, sysinfo.
 - `port` *(launcher)* — `ss` parse + kill; Linux-only. ~200 lines.
 - `1p` *(launcher, crate `onepw`)* — 1Password `op` CLI; secret handling + auto-clear; security-sensitive. ~220 lines. ✅ Built (2026-05-20); renamed from `op`, CLI invoked by absolute path.
-- `clip` *(launcher)* — clipboard ring buffer; needs a watcher/daemon or OSC 52 inbound (design question). ~250 lines.
+- ~~`clip` *(launcher)*~~ ✅ Built 2026-05-20 — wraps `cliphist list/decode`; no daemon needed.
 
 ### Tier 4 — Hard (multi-day; new architecture, integration, or multi-source)
 - `waveform` — live mic capture via `cpal` (new audio dep + real-time thread). ~250 lines.
@@ -257,7 +259,7 @@ Remaining launcher binaries (separate repos):
 `mm` (Miss Minutes) standalone app — animated clock companion. Build first, ahead of everything else. The `missminutes` glance panel reuses its animation code, so this also seeds that panel.
 
 **Wave 1 — action launchers** (smallest data sources, biggest day-to-day wins):
-`roam` (done) → `gst` → `ssh` → `note` → `clip`
+`roam` ✅ → `gst` ✅ → `ssh` → `note` → `clip` ✅
 
 **Wave 2 — tiles** (introduces the new event loop pattern):
 `cal` (smallest tile, validates pattern) → `tasks` → `glance` (the big one, but trait-based so panels can be added incrementally — ship with 3-4 panels, grow from there)
@@ -266,7 +268,7 @@ Remaining launcher binaries (separate repos):
 `net` (could go earlier — partial tile too) → `1p` (built) → `gh`
 
 **Wave 4 — specialized**:
-`proc`, `port` (Linux-only)
+`proc` ✅, `port` (Linux-only)
 
 ---
 
