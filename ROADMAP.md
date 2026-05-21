@@ -145,7 +145,7 @@ Polish items to batch into a dedicated pass over panel layouts (not blocking):
 ### roam backlog
 
 Found while reviewing the launchers spec on mobile (2026-05-20):
-- File previewer: full-screen modal is full-width + wraps (2026-05-21); `.md` renders styled (headings, bold/italic, code, lists, quotes, rules) and front-end code is syntax-highlighted (js/ts/jsx/tsx/json/css/scss/less + html/xml/vue/svelte) in both pane and modal. Remaining: tidy the inline preview pane (layout/readability).
+- File previewer: full-screen modal is full-width + wraps (2026-05-21); `.md` renders styled (headings, bold/italic, code, lists, quotes, rules) and code is syntax-highlighted (js/ts/jsx/tsx/json/css/scss/less, python, + html/xml/vue/svelte) in both pane and modal. Remaining: tidy the inline preview pane (layout/readability).
 - ✅ Recursive find shipped (2026-05-21): `R` walks the cwd to depth 3 (hidden-aware, symlink-safe, capped at 1000), shows matches with relative-path names + a `[find 'q': N]` header indicator; `Esc` clears. `/` remains the current-dir jump-filter.
 
 ---
