@@ -141,6 +141,12 @@ Infrastructure shipped alongside: brightness control (`[`/`]`), tab-strip header
 Polish items to batch into a dedicated pass over panel layouts (not blocking):
 - `water` — center the progress bar in the true vertical middle and refine the bar/text balance. Bar was moved above the text 2026-05-20 as a quick pass; revisit for exact centering and spacing.
 
+### roam backlog
+
+Found while reviewing the launchers spec on mobile (2026-05-20):
+- File previewer needs UI improvements: clean up the preview pane and full-screen preview modal (layout, wrapping, readability).
+- Search is broken. The help modal advertises `R` recursive find (depth 3) but there is no `R` handler, and `/` only matches the current directory (jump-to-name, not a recursive find). Implement bounded-depth recursive find so search-from-a-parent works, and make the help match reality.
+
 ---
 
 ## Still on the roadmap
