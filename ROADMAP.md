@@ -173,7 +173,7 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 ### glance work / data panels
 - `emails-per-day` — inbox volume BarChart, zele-driven
 - `activity-clock` — radial 24h clock with calendar event arcs (Canvas, skai cal)
-- `issues` — GitHub assigned-issues tile, BarChart (`gh api`). (`prs` built.)
+- ✅ `issues` — GitHub assigned-issues BarChart per repo (`gh search issues`). Built 2026-05-22, mirrors `prs`.
 - `standup` — auto-summary of today's git + claude + calendar activity
 
 ### Suite: launchers + companion (dual-form: standalone binary + glance panel)
@@ -248,7 +248,7 @@ A declarative `suite.toml` describing every installable piece so the installer/U
 3. **Distribution:** source build (phase 1) + `curl … | sh` bootstrap (phase 2) that installs the toolchain if needed, clones, runs the picker. Prebuilt/Termux releases (phase 3) deferred.
 4. **Suite command name:** `rsuite` (decided 2026-05-21).
 
-**Status — first slice shipped 2026-05-21 (`389fae6`):** `~/projects/dashboard-suite` is now a `rsuite` crate. Done: `suite.toml` manifest (8 launchers + 33 panels), interactive checklist picker, non-interactive flags (`--all/--defaults/--launchers/--panels/--dry-run`), `list`, apply (build per-repo -> install with installed.toml + non-ELF clobber guard -> write glance `panels.toml` with backup). Also shipped 2026-05-21: bootstrap (`install.sh`); `doctor`/`update`/`uninstall`/`add`/`remove` verbs; and the **shared `theme.toml`** across all 5 apps (defaults preserved). Next: prebuilt/Termux releases. Minor follow-up: `wt`/`recall` live in `~/.cargo/bin` (not `~/.local/bin`) — the rsuite manifest should learn a per-component install prefix.
+**Status — first slice shipped 2026-05-21 (`389fae6`):** `~/projects/dashboard-suite` is now a `rsuite` crate. Done: `suite.toml` manifest (8 launchers + 33 panels), interactive checklist picker, non-interactive flags (`--all/--defaults/--launchers/--panels/--dry-run`), `list`, apply (build per-repo -> install with installed.toml + non-ELF clobber guard -> write glance `panels.toml` with backup). Also shipped 2026-05-21: bootstrap (`install.sh`); `doctor`/`update`/`uninstall`/`add`/`remove` verbs; and the **shared `theme.toml`** across all 5 apps (defaults preserved). Next: prebuilt/Termux releases. ✅ Per-component install prefix shipped 2026-05-22: launchers take an optional `prefix`; `wt`/`recall` install to `~/.cargo/bin` (where they sit on PATH) and install relocates+dedupes any stale shadow copy.
 
 Effort: flagship, multi-day. Sequenced as Wave 5.
 
@@ -272,7 +272,7 @@ Remaining = launcher binaries (separate repos, roam/wt scaffold):
 ### Tier 3 — Moderate (≈1 day; new data source or external subprocess)
 glance panels: ✅ MOSTLY BUILT (2026-05-20) — ~~`gpu`~~ ~~`world-ping`~~ ~~`traceroute`~~ ~~`music`~~ ~~`prs`~~
 Remaining glance panel in this tier:
-- `issues` — GitHub assigned-issues tile, BarChart (`gh api`). Trivial now that `prs` exists (same scaffold). ~120 lines.
+- ✅ `issues` — GitHub assigned-issues BarChart per repo. Built 2026-05-22 on the `prs` scaffold.
 - `emails-per-day` — DEFERRED to the skai/zele bridge work (zele has no JSON mode + slow cold start). See cross-cutting note.
 
 Remaining launcher binaries (separate repos):
@@ -293,7 +293,7 @@ Remaining launcher binaries (separate repos):
 ### Tier 5 — Flagship (own design pass before building)
 - `health` — config schema + inline log-entry key mode + multi-day persistence + multi-view toggle + peon/water migration. ~400 lines. The highest-leverage remaining item: you'd use it daily, and it retires two existing panels.
 - `atlas` *(meta binary)* — parse this markdown roadmap, three view modes (Kanban / Wave / Network-graph via Canvas), action menu, file-watch. ~450 lines. Most complex single thing; depends on the roadmap doc staying structured.
-- `rsuite` *(packaging/installer + meta-CLI)* — picker + apply + bootstrap + full verb set + shared `theme.toml` ✅ (2026-05-21); remaining: prebuilt/Termux releases (+ per-component install prefix). See "Packaging, installer & user config".
+- `rsuite` *(packaging/installer + meta-CLI)* — picker + apply + bootstrap + full verb set + shared `theme.toml` ✅ (2026-05-21) + per-component install prefix ✅ (2026-05-22); remaining: prebuilt/Termux releases. See "Packaging, installer & user config".
 
 ### Cross-cutting note: the skai/MCP bridge
 `cal`, `tasks`, `activity-clock`, and the zele-driven `emails-per-day` all hit the same wall: glance is a plain Rust binary with no MCP client. Cleanest path is shelling out to the existing `zele` CLI wrapper or a thin skai bridge script and parsing its output. Solving this once unblocks all four. Worth a small spike before committing to any of them.
