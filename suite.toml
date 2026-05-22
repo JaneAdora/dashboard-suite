@@ -1,0 +1,248 @@
+# rsuite manifest: cargo-built components + glance panels.
+# `repo` is relative to ~/projects (override with $RSUITE_PROJECTS).
+# `package` set => `cargo build -p <package>` in that repo (workspace member);
+# omitted => `cargo build` in the repo. `artifact` = target/release/<artifact>;
+# `bin` = installed command name in ~/.local/bin.
+
+[[launcher]]
+name = "gst"
+summary = "git status/log"
+repo = "launchers"
+package = "gst"
+artifact = "gst"
+bin = "gst"
+requires = ["git"]
+default = true
+
+[[launcher]]
+name = "clip"
+summary = "clipboard ring"
+repo = "launchers"
+package = "clip"
+artifact = "clip"
+bin = "clip"
+requires = ["cliphist"]
+default = true
+
+[[launcher]]
+name = "1p"
+summary = "1Password vault"
+repo = "launchers"
+package = "onepw"
+artifact = "onepw"
+bin = "1p"
+requires = ["op"]
+default = false
+
+[[launcher]]
+name = "proc"
+summary = "process killer"
+repo = "launchers"
+package = "proc"
+artifact = "proc"
+bin = "proc"
+requires = []
+default = true
+
+[[launcher]]
+name = "roam"
+summary = "file browser"
+repo = "roam"
+artifact = "roam"
+bin = "roam"
+requires = []
+default = true
+
+[[launcher]]
+name = "wt"
+summary = "git worktrees"
+repo = "wt"
+artifact = "wt"
+bin = "wt"
+requires = ["git"]
+default = true
+
+[[launcher]]
+name = "recall"
+summary = "cc-session browser"
+repo = "recall"
+artifact = "recall"
+bin = "recall"
+requires = []
+default = false
+
+[[launcher]]
+name = "glance"
+summary = "dashboard tile host"
+repo = "glance"
+artifact = "glance"
+bin = "glance"
+requires = []
+default = true
+
+# --- glance panels (generated from glance ALL_PANELS) ---
+[[panel]]
+name = "cpu"
+summary = "CPU sparklines + top procs"
+default = true
+
+[[panel]]
+name = "mem"
+summary = "RAM/swap gauges"
+default = true
+
+[[panel]]
+name = "net"
+summary = "net throughput"
+default = true
+
+[[panel]]
+name = "disk"
+summary = "disk usage bars"
+default = true
+
+[[panel]]
+name = "loadavg"
+summary = "load average"
+default = true
+
+[[panel]]
+name = "entropy"
+summary = "entropy pool"
+default = true
+
+[[panel]]
+name = "fans"
+summary = "fan speeds"
+default = false
+
+[[panel]]
+name = "io"
+summary = "disk I/O"
+default = true
+
+[[panel]]
+name = "conn"
+summary = "connections"
+default = true
+
+[[panel]]
+name = "gpu"
+summary = "GPU stats"
+default = true
+
+[[panel]]
+name = "ping"
+summary = "ping latency"
+default = true
+
+[[panel]]
+name = "world-ping"
+summary = "global latency"
+default = true
+
+[[panel]]
+name = "traceroute"
+summary = "route hops"
+default = true
+
+[[panel]]
+name = "commits"
+summary = "commit heatmap"
+default = true
+
+[[panel]]
+name = "peon"
+summary = "pushup/squat tracker"
+default = true
+
+[[panel]]
+name = "prs"
+summary = "GitHub PRs"
+default = true
+
+[[panel]]
+name = "temp"
+summary = "temperatures"
+default = true
+
+[[panel]]
+name = "tsmap"
+summary = "tailscale peers"
+default = true
+
+[[panel]]
+name = "clock"
+summary = "block-digit clock"
+default = true
+
+[[panel]]
+name = "weather"
+summary = "forecast"
+default = true
+env = ["GLANCE_LAT", "GLANCE_LON", "GLANCE_LOCATION"]
+
+[[panel]]
+name = "alerts"
+summary = "weather alerts"
+default = true
+
+[[panel]]
+name = "hurricane"
+summary = "atlantic storms"
+default = true
+
+[[panel]]
+name = "solar"
+summary = "sun position"
+default = true
+
+[[panel]]
+name = "water"
+summary = "water tracker"
+default = true
+
+[[panel]]
+name = "timer"
+summary = "countdown timer"
+default = true
+
+[[panel]]
+name = "music"
+summary = "now playing"
+default = true
+
+[[panel]]
+name = "pet"
+summary = "virtual pet"
+default = true
+
+[[panel]]
+name = "moon"
+summary = "moon phase"
+default = true
+
+[[panel]]
+name = "mascot"
+summary = "pixel mascot"
+default = true
+
+[[panel]]
+name = "starfield"
+summary = "starfield"
+default = true
+
+[[panel]]
+name = "mandala"
+summary = "mandala"
+default = true
+
+[[panel]]
+name = "battery"
+summary = "battery gauge"
+default = false
+
+[[panel]]
+name = "launchers"
+summary = "suite launcher menu"
+default = true

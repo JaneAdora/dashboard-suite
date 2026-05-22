@@ -1,0 +1,20 @@
+[package]
+name = "rsuite"
+version = "0.1.0"
+edition = "2021"
+description = "Dashboard Widget Suite installer: pick launchers + glance panels, build, install, configure."
+
+[[bin]]
+name = "rsuite"
+path = "src/main.rs"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+dirs = "5"
+
+[profile.release]
+strip = true
