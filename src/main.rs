@@ -20,6 +20,8 @@ USAGE:
 VERBS:
   rsuite list               Show all components, defaults, and missing deps
   rsuite doctor             Health check: PATH, installed bins, deps, glance config
+  rsuite add a,b ...        Install launcher(s) and/or merge panel(s) into config
+  rsuite remove a,b ...     Uninstall launcher(s) and/or drop panel(s) from config
   rsuite update             Rebuild + reinstall everything currently installed
   rsuite uninstall [--config]  Remove installed bins (and optionally panels.toml)
 
@@ -36,6 +38,8 @@ fn main() -> Result<()> {
         }
         Some("doctor") => return apply::doctor(&Manifest::load()?),
         Some("update") => return apply::update(&Manifest::load()?),
+        Some("add") => return apply::add(&Manifest::load()?, &names_after(&args)),
+        Some("remove") => return apply::remove(&Manifest::load()?, &names_after(&args)),
         Some("uninstall") => return apply::uninstall(args.iter().any(|a| a == "--config")),
         _ => {}
     }
@@ -89,6 +93,10 @@ fn main() -> Result<()> {
         return Ok(());
     }
     apply::run(&apply::Plan { launchers: sel_launchers, panels: sel_panels, dry_run: dry })
+}
+
+fn names_after(args: &[String]) -> Vec<String> {
+    args.iter().skip(1).filter(|a| !a.starts_with('-')).cloned().collect()
 }
 
 fn split(s: Option<&String>) -> Vec<String> {

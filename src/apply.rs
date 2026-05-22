@@ -297,3 +297,94 @@ pub fn uninstall(remove_config: bool) -> Result<()> {
     println!("done.");
     Ok(())
 }
+
+
+/// Current glance panel list: the user's panels.toml if present, else the
+/// manifest defaults (what a fresh picker run would write).
+fn current_panels(m: &crate::manifest::Manifest) -> Vec<String> {
+    let cfg = config_dir().join("glance/panels.toml");
+    if cfg.is_file() {
+        parse_panel_names(&cfg)
+    } else {
+        m.panels.iter().filter(|p| p.default).map(|p| p.name.clone()).collect()
+    }
+}
+
+/// Split names into known launchers, known panels, and unknowns.
+fn partition(m: &crate::manifest::Manifest, names: &[String]) -> (Vec<Launcher>, Vec<String>, Vec<String>) {
+    let (mut ls, mut ps, mut un) = (Vec::new(), Vec::new(), Vec::new());
+    for n in names {
+        if let Some(l) = m.launchers.iter().find(|l| &l.name == n || &l.bin == n) {
+            ls.push(l.clone());
+        } else if m.panels.iter().any(|p| &p.name == n) {
+            ps.push(n.clone());
+        } else {
+            un.push(n.clone());
+        }
+    }
+    (ls, ps, un)
+}
+
+/// Install named launchers and/or merge named panels into panels.toml.
+pub fn add(m: &crate::manifest::Manifest, names: &[String]) -> Result<()> {
+    if names.is_empty() {
+        println!("usage: rsuite add <launcher|panel>...");
+        return Ok(());
+    }
+    let (launchers, panels, unknown) = partition(m, names);
+    for u in &unknown {
+        eprintln!("  ! unknown component: {u}");
+    }
+    if !launchers.is_empty() {
+        run(&Plan { launchers, panels: Vec::new(), dry_run: false })?;
+    }
+    if !panels.is_empty() {
+        let cfg = config_dir().join("glance/panels.toml");
+        let mut cur = current_panels(m);
+        let mut added = Vec::new();
+        for n in &panels {
+            if !cur.contains(n) {
+                cur.push(n.clone());
+                added.push(n.clone());
+            }
+        }
+        write_panels(&cfg, &cur)?;
+        let what = if added.is_empty() { "(already present)".to_string() } else { added.join(", ") };
+        println!("  panels: added {} -> {} ({} total)", what, cfg.display(), cur.len());
+    }
+    Ok(())
+}
+
+/// Uninstall named launchers and/or drop named panels from panels.toml.
+pub fn remove(m: &crate::manifest::Manifest, names: &[String]) -> Result<()> {
+    if names.is_empty() {
+        println!("usage: rsuite remove <launcher|panel>...");
+        return Ok(());
+    }
+    let (launchers, panels, unknown) = partition(m, names);
+    for u in &unknown {
+        eprintln!("  ! unknown component: {u}");
+    }
+    if !launchers.is_empty() {
+        let mut installed = load_installed();
+        for l in &launchers {
+            let dest = bin_dir().join(&l.bin);
+            if dest.is_file() && is_elf(&dest) {
+                std::fs::remove_file(&dest).ok();
+                println!("  removed {}", dest.display());
+            } else if dest.is_file() {
+                eprintln!("  ! left {} (not an ELF we recognize)", dest.display());
+            }
+            installed.bin.retain(|r| r.name != l.bin);
+        }
+        save_installed(&installed);
+    }
+    if !panels.is_empty() {
+        let cfg = config_dir().join("glance/panels.toml");
+        let drop: HashSet<&str> = panels.iter().map(|s| s.as_str()).collect();
+        let cur: Vec<String> = current_panels(m).into_iter().filter(|p| !drop.contains(p.as_str())).collect();
+        write_panels(&cfg, &cur)?;
+        println!("  panels: removed {} -> {} ({} left)", panels.join(", "), cfg.display(), cur.len());
+    }
+    Ok(())
+}
