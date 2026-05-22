@@ -1,0 +1,7 @@
+# Dashboard Suite shared theme.
+# Copy to ~/.config/dashboard-suite/theme.toml; any missing key uses the default.
+# Colors are #rrggbb hex. All suite apps read this at startup.
+[colors]
+pink = "#e88b9f"      # active / now / current values
+lavender = "#c5a3ff"  # historical / labels / dim
+magenta = "#ff6ec7"   # alerts / accent / keywords
