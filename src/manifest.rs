@@ -27,6 +27,10 @@ pub struct Launcher {
     pub requires: Vec<String>,
     #[serde(default)]
     pub default: bool,
+    /// Install-dir override (e.g. "~/.cargo/bin"); a leading `~` expands to
+    /// $HOME. Unset => the suite bin dir (~/.local/bin).
+    #[serde(default)]
+    pub prefix: Option<String>,
 }
 
 impl Launcher {
@@ -83,5 +87,10 @@ mod tests {
         assert!(m.panels.iter().any(|p| p.name == "cpu"));
         // the 1p launcher builds the `onepw` artifact but installs as `1p`
         assert!(m.launchers.iter().any(|l| l.bin == "1p" && l.artifact() == "onepw"));
+        // wt installs to ~/.cargo/bin via a per-component prefix override
+        assert!(m
+            .launchers
+            .iter()
+            .any(|l| l.bin == "wt" && l.prefix.as_deref() == Some("~/.cargo/bin")));
     }
 }

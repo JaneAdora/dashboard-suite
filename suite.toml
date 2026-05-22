@@ -2,7 +2,8 @@
 # `repo` is relative to ~/projects (override with $RSUITE_PROJECTS).
 # `package` set => `cargo build -p <package>` in that repo (workspace member);
 # omitted => `cargo build` in the repo. `artifact` = target/release/<artifact>;
-# `bin` = installed command name in ~/.local/bin.
+# `bin` = installed command name. `prefix` = per-component install dir
+# override (default ~/.local/bin; a leading ~ expands to $HOME).
 
 [[launcher]]
 name = "gst"
@@ -61,6 +62,7 @@ artifact = "wt"
 bin = "wt"
 requires = ["git"]
 default = true
+prefix = "~/.cargo/bin"
 
 [[launcher]]
 name = "recall"
@@ -70,6 +72,7 @@ artifact = "recall"
 bin = "recall"
 requires = []
 default = false
+prefix = "~/.cargo/bin"
 
 [[launcher]]
 name = "glance"
@@ -159,6 +162,11 @@ default = true
 [[panel]]
 name = "prs"
 summary = "GitHub PRs"
+default = true
+
+[[panel]]
+name = "issues"
+summary = "GitHub assigned issues"
 default = true
 
 [[panel]]

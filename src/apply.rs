@@ -23,6 +23,25 @@ pub fn projects_dir() -> PathBuf {
 fn bin_dir() -> PathBuf {
     dirs::home_dir().unwrap_or_default().join(".local/bin")
 }
+
+/// Resolve a `~`/`~/...` path against $HOME; pass other paths through unchanged.
+fn expand_tilde(p: &str) -> PathBuf {
+    if p == "~" {
+        return dirs::home_dir().unwrap_or_default();
+    }
+    if let Some(rest) = p.strip_prefix("~/") {
+        return dirs::home_dir().unwrap_or_default().join(rest);
+    }
+    PathBuf::from(p)
+}
+
+/// Install dir for a launcher: its `prefix` override if set, else the suite bin dir.
+fn launcher_bin_dir(l: &Launcher) -> PathBuf {
+    match l.prefix.as_deref() {
+        Some(p) => expand_tilde(p),
+        None => bin_dir(),
+    }
+}
 fn data_dir() -> PathBuf {
     std::env::var("XDG_DATA_HOME")
         .map(PathBuf::from)
@@ -84,7 +103,8 @@ pub fn run(plan: &Plan) -> Result<()> {
             continue;
         }
         let artifact = repo.join("target/release").join(l.artifact());
-        let dest = bin.join(&l.bin);
+        let dest_dir = launcher_bin_dir(l);
+        let dest = dest_dir.join(&l.bin);
 
         if plan.dry_run {
             let how = match &l.package {
@@ -108,6 +128,7 @@ pub fn run(plan: &Plan) -> Result<()> {
         if !artifact.is_file() {
             bail!("{}: artifact missing at {}", l.name, artifact.display());
         }
+        std::fs::create_dir_all(&dest_dir).ok();
         // Clobber guard (the op-wrapper lesson): never overwrite a non-ELF file
         // (e.g. a credential shell wrapper) that we did not install ourselves.
         let dest_s = dest.to_string_lossy().into_owned();
@@ -117,6 +138,20 @@ pub fn run(plan: &Plan) -> Result<()> {
         }
         std::fs::copy(&artifact, &dest).with_context(|| format!("install {}", dest.display()))?;
         set_exec(&dest);
+        // If this component was recorded at a different path before (e.g. moved
+        // from ~/.local/bin into a prefix dir), drop the stale shadowed copy.
+        if let Some(old) = installed
+            .bin
+            .iter()
+            .find(|r| r.name == l.bin && r.path != dest_s)
+            .map(|r| r.path.clone())
+        {
+            let oldp = PathBuf::from(&old);
+            if oldp.is_file() && is_elf(&oldp) {
+                std::fs::remove_file(&oldp).ok();
+                println!("  (removed stale copy at {old})");
+            }
+        }
         record(&mut installed, &l.bin, &dest, &l.repo);
         println!("  installed {} -> {}", l.bin, dest.display());
     }
@@ -175,7 +210,7 @@ fn save_installed(i: &Installed) {
 }
 fn record(i: &mut Installed, name: &str, path: &Path, repo: &str) {
     let path = path.to_string_lossy().into_owned();
-    i.bin.retain(|r| r.path != path);
+    i.bin.retain(|r| r.name != name);
     i.bin.push(Record { name: name.into(), path, repo: repo.into() });
 }
 
@@ -228,14 +263,17 @@ pub fn doctor(m: &crate::manifest::Manifest) -> Result<()> {
 
     println!("\nLaunchers:");
     for l in &m.launchers {
-        let inst = bin.join(&l.bin).is_file();
+        let dir = launcher_bin_dir(l);
+        let inst = dir.join(&l.bin).is_file();
         let miss: Vec<&str> = l.requires.iter().map(|s| s.as_str()).filter(|r| which(r).is_none()).collect();
         let needs = if miss.is_empty() { String::new() } else { format!("  needs: {}", miss.join(", ")) };
+        let at = if l.prefix.is_some() { format!(" -> {}", dir.display()) } else { String::new() };
         println!(
-            "  [{}] {:<8} {}{}",
+            "  [{}] {:<8} {}{}{}",
             mark(inst),
             l.name,
             if inst { "installed" } else { "not installed" },
+            at,
             needs
         );
     }
@@ -368,7 +406,7 @@ pub fn remove(m: &crate::manifest::Manifest, names: &[String]) -> Result<()> {
     if !launchers.is_empty() {
         let mut installed = load_installed();
         for l in &launchers {
-            let dest = bin_dir().join(&l.bin);
+            let dest = launcher_bin_dir(l).join(&l.bin);
             if dest.is_file() && is_elf(&dest) {
                 std::fs::remove_file(&dest).ok();
                 println!("  removed {}", dest.display());
