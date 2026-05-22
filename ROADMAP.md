@@ -244,7 +244,9 @@ A declarative `suite.toml` describing every installable piece so the installer/U
 1. **Topology:** meta-installer over separate repos. A `dashboard-suite` repo holds the installer + `suite.toml` (pointing at `~/projects/{roam,glance,wt,recall,launchers}`) and builds selected components on demand. No mono-repo consolidation.
 2. **Installer surface:** Rust TUI checklist picker (reuses `launcher-core`) for the interactive path, plus `--launchers …/--panels …/--profile` flags for scripting.
 3. **Distribution:** source build (phase 1) + `curl … | sh` bootstrap (phase 2) that installs the toolchain if needed, clones, runs the picker. Prebuilt/Termux releases (phase 3) deferred.
-4. **Suite command name:** still TBD (`dash` vs `suite`/`widgets`/`dw`).
+4. **Suite command name:** `rsuite` (decided 2026-05-21).
+
+**Status — first slice shipped 2026-05-21 (`389fae6`):** `~/projects/dashboard-suite` is now a `rsuite` crate. Done: `suite.toml` manifest (8 launchers + 33 panels), interactive checklist picker, non-interactive flags (`--all/--defaults/--launchers/--panels/--dry-run`), `list`, apply (build per-repo -> install with installed.toml + non-ELF clobber guard -> write glance `panels.toml` with backup). Next: `curl|sh` bootstrap, then `add/remove/update/doctor/uninstall` verbs and the shared `theme.toml`.
 
 Effort: flagship, multi-day. Sequenced as Wave 5.
 
@@ -289,7 +291,7 @@ Remaining launcher binaries (separate repos):
 ### Tier 5 — Flagship (own design pass before building)
 - `health` — config schema + inline log-entry key mode + multi-day persistence + multi-view toggle + peon/water migration. ~400 lines. The highest-leverage remaining item: you'd use it daily, and it retires two existing panels.
 - `atlas` *(meta binary)* — parse this markdown roadmap, three view modes (Kanban / Wave / Network-graph via Canvas), action menu, file-watch. ~450 lines. Most complex single thing; depends on the roadmap doc staying structured.
-- `dash` *(packaging/installer + meta-CLI)* — manifest-driven component picker, install/add/remove/update/doctor, shared theme + XDG config, prebuilt-release path. Flagship infra; see "Packaging, installer & user config". Multi-day; name TBD.
+- `rsuite` *(packaging/installer + meta-CLI)* — manifest-driven picker + install/apply ✅ shipped 2026-05-21 (first slice); remaining: `curl|sh` bootstrap, `add/remove/update/doctor/uninstall` verbs, shared `theme.toml`, prebuilt releases. See "Packaging, installer & user config".
 
 ### Cross-cutting note: the skai/MCP bridge
 `cal`, `tasks`, `activity-clock`, and the zele-driven `emails-per-day` all hit the same wall: glance is a plain Rust binary with no MCP client. Cleanest path is shelling out to the existing `zele` CLI wrapper or a thin skai bridge script and parsing its output. Solving this once unblocks all four. Worth a small spike before committing to any of them.
@@ -320,7 +322,7 @@ Remaining launcher binaries (separate repos):
 `proc` ✅, `port` (Linux-only)
 
 **Wave 5 — packaging & distribution**:
-`dashboard-suite` meta-installer repo + `suite.toml` (points at the component repos) -> Rust TUI picker (+ flags) builds selected launchers/panels -> shared config/theme -> `curl|sh` bootstrap. Prebuilt/Termux releases later. See "Packaging, installer & user config".
+`rsuite` meta-installer + `suite.toml` ✅ (picker + flags + apply, 2026-05-21) -> `curl|sh` bootstrap -> `add/remove/update/doctor` verbs + shared `theme.toml` -> prebuilt/Termux releases. See "Packaging, installer & user config".
 
 ---
 
