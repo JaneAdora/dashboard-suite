@@ -246,7 +246,7 @@ A declarative `suite.toml` describing every installable piece so the installer/U
 3. **Distribution:** source build (phase 1) + `curl … | sh` bootstrap (phase 2) that installs the toolchain if needed, clones, runs the picker. Prebuilt/Termux releases (phase 3) deferred.
 4. **Suite command name:** `rsuite` (decided 2026-05-21).
 
-**Status — first slice shipped 2026-05-21 (`389fae6`):** `~/projects/dashboard-suite` is now a `rsuite` crate. Done: `suite.toml` manifest (8 launchers + 33 panels), interactive checklist picker, non-interactive flags (`--all/--defaults/--launchers/--panels/--dry-run`), `list`, apply (build per-repo -> install with installed.toml + non-ELF clobber guard -> write glance `panels.toml` with backup). Also shipped 2026-05-21: `curl|sh` bootstrap (`install.sh`) + `doctor`/`update`/`uninstall` verbs. Next: `add`/`remove` with panels.toml merge, shared `theme.toml`, prebuilt/Termux releases.
+**Status — first slice shipped 2026-05-21 (`389fae6`):** `~/projects/dashboard-suite` is now a `rsuite` crate. Done: `suite.toml` manifest (8 launchers + 33 panels), interactive checklist picker, non-interactive flags (`--all/--defaults/--launchers/--panels/--dry-run`), `list`, apply (build per-repo -> install with installed.toml + non-ELF clobber guard -> write glance `panels.toml` with backup). Also shipped 2026-05-21: bootstrap (`install.sh`) + `doctor`/`update`/`uninstall` + `add`/`remove` (panel-merge) verbs. Next: shared `theme.toml`, then prebuilt/Termux releases.
 
 Effort: flagship, multi-day. Sequenced as Wave 5.
 
@@ -291,7 +291,7 @@ Remaining launcher binaries (separate repos):
 ### Tier 5 — Flagship (own design pass before building)
 - `health` — config schema + inline log-entry key mode + multi-day persistence + multi-view toggle + peon/water migration. ~400 lines. The highest-leverage remaining item: you'd use it daily, and it retires two existing panels.
 - `atlas` *(meta binary)* — parse this markdown roadmap, three view modes (Kanban / Wave / Network-graph via Canvas), action menu, file-watch. ~450 lines. Most complex single thing; depends on the roadmap doc staying structured.
-- `rsuite` *(packaging/installer + meta-CLI)* — picker + apply + bootstrap + `doctor`/`update`/`uninstall` ✅ (2026-05-21); remaining: `add`/`remove` with panel merge, shared `theme.toml`, prebuilt/Termux releases. See "Packaging, installer & user config".
+- `rsuite` *(packaging/installer + meta-CLI)* — picker + apply + bootstrap + `list`/`doctor`/`update`/`uninstall`/`add`/`remove` ✅ (2026-05-21); remaining: shared `theme.toml`, prebuilt/Termux releases. See "Packaging, installer & user config".
 
 ### Cross-cutting note: the skai/MCP bridge
 `cal`, `tasks`, `activity-clock`, and the zele-driven `emails-per-day` all hit the same wall: glance is a plain Rust binary with no MCP client. Cleanest path is shelling out to the existing `zele` CLI wrapper or a thin skai bridge script and parsing its output. Solving this once unblocks all four. Worth a small spike before committing to any of them.
@@ -322,7 +322,7 @@ Remaining launcher binaries (separate repos):
 `proc` ✅, `port` (Linux-only)
 
 **Wave 5 — packaging & distribution**:
-`rsuite` ✅ picker + flags + apply + bootstrap + doctor/update/uninstall (2026-05-21) -> `add`/`remove` (panel merge) + shared `theme.toml` -> prebuilt/Termux releases. See "Packaging, installer & user config".
+`rsuite` ✅ picker + flags + apply + bootstrap + full verb set incl. add/remove panel-merge (2026-05-21) -> shared `theme.toml` -> prebuilt/Termux releases. See "Packaging, installer & user config".
 
 ---
 
