@@ -147,6 +147,7 @@ Polish items to batch into a dedicated pass over panel layouts (not blocking):
 Found while reviewing the launchers spec on mobile (2026-05-20):
 - File previewer: full-screen modal is full-width + wraps (2026-05-21); `.md` renders styled (headings, bold/italic, code, lists, quotes, rules) and code is syntax-highlighted (js/ts/jsx/tsx/json/css/scss/less, python, + html/xml/vue/svelte) in both pane and modal. Also `roam <file>` opens that file's folder and jumps straight to its (styled) preview (2026-05-21). Remaining: tidy the inline preview pane (layout/readability).
 - ✅ Recursive find shipped (2026-05-21): `R` walks the cwd to depth 3 (hidden-aware, symlink-safe, capped at 1000), shows matches with relative-path names + a `[find 'q': N]` header indicator; `Esc` clears. `/` remains the current-dir jump-filter.
+- ✅ Folder + image previews shipped (2026-05-22): focusing a directory shows its contents (dirs-first, hidden-aware) in the right pane instead of a blank/binary message; image files (png/jpg/gif/webp/bmp) render as half-block art (`▀`, fg=upper / bg=lower pixel) directly in the pane, and the preview modal renders the same image at the modal's larger size for higher res. Decode-once cache (`thumbnail(1024)`, 30MB guard) keeps it snappy over SSH/tmux without graphics protocols. Remaining (carried): tidy the inline preview pane (layout/readability).
 
 ---
 
