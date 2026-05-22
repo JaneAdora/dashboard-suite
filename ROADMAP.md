@@ -211,6 +211,8 @@ New candidates surfaced by the audit (for brainstorm): **`docker`**, **`svc`** (
 2. **Meta-installer over separate repos** — leave repos in place; a top-level repo holds the installer + a manifest pointing at each repo. Less churn now, but the installer carries the complexity of locating/building N repos.
 3. **Prebuilt release artifacts** — CI builds static binaries per component per target; installer downloads selected ones. Best for other machines/mobile, needs CI + release infra. Layer on later, on top of (1).
 
+**Decided 2026-05-21: option 2 (meta-installer over separate repos).** Keep repos in place; a `dashboard-suite` repo holds the installer + manifest and builds selected components on demand. Revisit mono-repo only if multi-repo build friction grows.
+
 ### B. Component manifest (the registry the installer reads)
 A declarative `suite.toml` describing every installable piece so the installer/UI is data-driven, not hardcoded:
 ```toml
@@ -238,11 +240,11 @@ A declarative `suite.toml` describing every installable piece so the installer/U
 2. `curl … | sh` bootstrap that installs the toolchain if needed, clones, runs the installer.
 3. GitHub Releases with prebuilt binaries per target (incl. aarch64/Termux); installer prefers a matching prebuilt, falls back to source; `dash update` checks latest. Termux notes: no systemd (`svc` N/A), `termux-clipboard`/OSC52, `battery` panel relevant.
 
-### F. Open decisions (let's talk)
-1. Topology: mono-repo workspace vs meta-installer over separate repos (recommend mono-repo).
-2. Installer surface: Rust TUI (on-brand, reuses scaffold) vs `gum`/`fzf` bash vs plain bash select-loop (recommend Rust TUI + a thin bash bootstrap).
-3. Source-only now, or invest in CI/prebuilt releases for mobile?
-4. Suite command name — `dash` was dropped earlier as a tile idea; reuse it for the meta-CLI, or pick `suite`/`widgets`/`dw`?
+### F. Decisions (2026-05-21)
+1. **Topology:** meta-installer over separate repos. A `dashboard-suite` repo holds the installer + `suite.toml` (pointing at `~/projects/{roam,glance,wt,recall,launchers}`) and builds selected components on demand. No mono-repo consolidation.
+2. **Installer surface:** Rust TUI checklist picker (reuses `launcher-core`) for the interactive path, plus `--launchers …/--panels …/--profile` flags for scripting.
+3. **Distribution:** source build (phase 1) + `curl … | sh` bootstrap (phase 2) that installs the toolchain if needed, clones, runs the picker. Prebuilt/Termux releases (phase 3) deferred.
+4. **Suite command name:** still TBD (`dash` vs `suite`/`widgets`/`dw`).
 
 Effort: flagship, multi-day. Sequenced as Wave 5.
 
@@ -318,7 +320,7 @@ Remaining launcher binaries (separate repos):
 `proc` ✅, `port` (Linux-only)
 
 **Wave 5 — packaging & distribution**:
-mono-repo workspace -> manifest-driven `dash` installer (picker + flags) -> shared config/theme -> curl bootstrap -> prebuilt releases (incl. Termux/aarch64). See "Packaging, installer & user config".
+`dashboard-suite` meta-installer repo + `suite.toml` (points at the component repos) -> Rust TUI picker (+ flags) builds selected launchers/panels -> shared config/theme -> `curl|sh` bootstrap. Prebuilt/Termux releases later. See "Packaging, installer & user config".
 
 ---
 
