@@ -2,7 +2,7 @@
 
 Living roadmap for the suite of Rust/ratatui terminal widgets (`wt` / `recall` / `roam` / …) for tiled terminal dashboards, Termux, and SSH-from-mobile use cases.
 
-**Last updated:** 2026-05-20
+**Last updated:** 2026-05-21
 
 Originally extracted from `~/.claude/plans/jolly-crunching-teacup.md` (the roam design doc) on 2026-05-19. Maintain this file directly going forward.
 
@@ -202,6 +202,52 @@ New candidates surfaced by the audit (for brainstorm): **`docker`**, **`svc`** (
 
 ---
 
+## Packaging, installer & user config
+
+**Goal:** turn the loose set of repos (`launchers` workspace + `roam`/`glance`/`wt`/`recall` + the `mm` shim) into one installable suite where you pick which launchers and which glance panels you want, with a coherent, documented config story. Targets: this box, other Linux machines, and Termux / SSH-from-mobile.
+
+### A. Repo & build topology (decision needed)
+1. **Mono-repo cargo workspace** — fold `roam`/`glance`/`wt`/`recall` into the `launchers` workspace (rename it `dashboard-suite`). One `cargo build --release` builds everything, one version, `launcher-core`/theme deduped. Biggest restructure (git history + paths) but makes the installer trivial: it just selects workspace members + panels. **Recommended foundation.**
+2. **Meta-installer over separate repos** — leave repos in place; a top-level repo holds the installer + a manifest pointing at each repo. Less churn now, but the installer carries the complexity of locating/building N repos.
+3. **Prebuilt release artifacts** — CI builds static binaries per component per target; installer downloads selected ones. Best for other machines/mobile, needs CI + release infra. Layer on later, on top of (1).
+
+### B. Component manifest (the registry the installer reads)
+A declarative `suite.toml` describing every installable piece so the installer/UI is data-driven, not hardcoded:
+```toml
+[launcher.gst]  summary="git status/log"  bin="gst"  default=true   requires=["git"]
+[launcher.1p]   summary="1Password"        bin="1p"   default=false  requires=["op"]
+[panel.cpu]     summary="CPU sparklines"   default=true
+[panel.weather] summary="forecast"         default=true  env=["GLANCE_LAT","GLANCE_LON"]
+```
+`requires` = external bins the component shells out to (installer warns if missing); `env` = config knobs; `default` = preselected. glance panels live in the same manifest so the installer writes `~/.config/glance/panels.toml` from the chosen set. Generate the manifest from glance's `ALL_PANELS` + the launcher list so it can never drift.
+
+### C. The installer (two surfaces over one manifest)
+- **Interactive (default):** an on-brand checklist TUI reusing `launcher-core` (list/Selection/theme): two sections (Launchers, Glance panels), space to toggle, defaults preselected, inline `requires`/missing-dep warnings, Enter to build + install + write config.
+- **Non-interactive:** flags for scripting/reproducibility — `--launchers gst,clip,1p,proc --panels cpu,mem,clock,weather`, `--all`, `--prefix ~/.local`, `--dry-run`, and `--profile <name>` presets (e.g. `mobile`, `desktop`, `work`).
+- **Lifecycle verbs:** `list`, `add <c>`, `remove <c>`, `update` (rebuild+reinstall), `uninstall`, `doctor` (check `requires`, PATH, config validity).
+- **Safety (hard requirement, learned from the `op` clobber):** record installed files in `~/.local/share/dashboard-suite/installed.toml`; never overwrite a path the suite did not create; refuse to clobber a same-named non-suite binary (marker/checksum check); print the diff of what will change before doing it.
+
+### D. Config model
+- **XDG everywhere:** `${XDG_CONFIG_HOME:-~/.config}/<app>/…`, data under `${XDG_DATA_HOME:-~/.local/share}/<app>/…` (glance/roam already do this).
+- **Shared theme:** lift the pink/lavender/magenta palette into one `~/.config/dashboard-suite/theme.toml` all apps read (today each hardcodes `theme.rs`). Recolor the whole suite in one place; per-app override allowed.
+- Per-app config stays per-app (`glance/panels.toml`, `roam/bookmarks.toml`, future `glance/health.toml`); installer scaffolds them from the picker and ships documented examples.
+- `dash config [app]` opens the file in `$EDITOR`; `dash config --check` validates (catches the "milliseconds vs seconds" class of bug). Generate one `CONFIG.md` from the manifest documenting every knob.
+
+### E. Distribution & updates (phased)
+1. Build-from-source installer in the workspace (works anywhere rust is present).
+2. `curl … | sh` bootstrap that installs the toolchain if needed, clones, runs the installer.
+3. GitHub Releases with prebuilt binaries per target (incl. aarch64/Termux); installer prefers a matching prebuilt, falls back to source; `dash update` checks latest. Termux notes: no systemd (`svc` N/A), `termux-clipboard`/OSC52, `battery` panel relevant.
+
+### F. Open decisions (let's talk)
+1. Topology: mono-repo workspace vs meta-installer over separate repos (recommend mono-repo).
+2. Installer surface: Rust TUI (on-brand, reuses scaffold) vs `gum`/`fzf` bash vs plain bash select-loop (recommend Rust TUI + a thin bash bootstrap).
+3. Source-only now, or invest in CI/prebuilt releases for mobile?
+4. Suite command name — `dash` was dropped earlier as a tile idea; reuse it for the meta-CLI, or pick `suite`/`widgets`/`dw`?
+
+Effort: flagship, multi-day. Sequenced as Wave 5.
+
+---
+
 ## Development difficulty tiers
 
 Everything remaining, ranked easiest → hardest to build. Tier reflects data-source complexity, new patterns/deps required, state management, and rough line count. Items within a tier are roughly equal.
@@ -241,6 +287,7 @@ Remaining launcher binaries (separate repos):
 ### Tier 5 — Flagship (own design pass before building)
 - `health` — config schema + inline log-entry key mode + multi-day persistence + multi-view toggle + peon/water migration. ~400 lines. The highest-leverage remaining item: you'd use it daily, and it retires two existing panels.
 - `atlas` *(meta binary)* — parse this markdown roadmap, three view modes (Kanban / Wave / Network-graph via Canvas), action menu, file-watch. ~450 lines. Most complex single thing; depends on the roadmap doc staying structured.
+- `dash` *(packaging/installer + meta-CLI)* — manifest-driven component picker, install/add/remove/update/doctor, shared theme + XDG config, prebuilt-release path. Flagship infra; see "Packaging, installer & user config". Multi-day; name TBD.
 
 ### Cross-cutting note: the skai/MCP bridge
 `cal`, `tasks`, `activity-clock`, and the zele-driven `emails-per-day` all hit the same wall: glance is a plain Rust binary with no MCP client. Cleanest path is shelling out to the existing `zele` CLI wrapper or a thin skai bridge script and parsing its output. Solving this once unblocks all four. Worth a small spike before committing to any of them.
@@ -269,6 +316,9 @@ Remaining launcher binaries (separate repos):
 
 **Wave 4 — specialized**:
 `proc` ✅, `port` (Linux-only)
+
+**Wave 5 — packaging & distribution**:
+mono-repo workspace -> manifest-driven `dash` installer (picker + flags) -> shared config/theme -> curl bootstrap -> prebuilt releases (incl. Termux/aarch64). See "Packaging, installer & user config".
 
 ---
 
