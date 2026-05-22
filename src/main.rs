@@ -15,16 +15,32 @@ USAGE:
   rsuite --all              Install everything
   rsuite --launchers a,b    Install just these launchers
   rsuite --panels cpu,mem   Write glance panels.toml with just these
-  rsuite list               Show all components, defaults, and missing deps
   rsuite --dry-run [...]    Show the plan without building/installing/writing
-  rsuite --help | --version
 
-Flags combine, e.g.  rsuite --dry-run --all
+VERBS:
+  rsuite list               Show all components, defaults, and missing deps
+  rsuite doctor             Health check: PATH, installed bins, deps, glance config
+  rsuite update             Rebuild + reinstall everything currently installed
+  rsuite uninstall [--config]  Remove installed bins (and optionally panels.toml)
+
+  rsuite --help | --version
 ";
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let (mut dry, mut all, mut defaults, mut list) = (false, false, false, false);
+
+    match args.first().map(String::as_str) {
+        Some("list") => {
+            print_list(&Manifest::load()?);
+            return Ok(());
+        }
+        Some("doctor") => return apply::doctor(&Manifest::load()?),
+        Some("update") => return apply::update(&Manifest::load()?),
+        Some("uninstall") => return apply::uninstall(args.iter().any(|a| a == "--config")),
+        _ => {}
+    }
+
+    let (mut dry, mut all, mut defaults) = (false, false, false);
     let mut launchers: Option<Vec<String>> = None;
     let mut panels: Option<Vec<String>> = None;
 
@@ -39,7 +55,6 @@ fn main() -> Result<()> {
                 println!("rsuite {}", env!("CARGO_PKG_VERSION"));
                 return Ok(());
             }
-            "list" => list = true,
             "--dry-run" => dry = true,
             "--all" => all = true,
             "--defaults" => defaults = true,
@@ -53,11 +68,6 @@ fn main() -> Result<()> {
     }
 
     let m = Manifest::load()?;
-    if list {
-        print_list(&m);
-        return Ok(());
-    }
-
     let non_interactive = all || defaults || launchers.is_some() || panels.is_some();
     let (sel_launchers, sel_panels): (Vec<Launcher>, Vec<String>) = if non_interactive {
         (select_launchers(&m, all, defaults, &launchers), select_panels(&m, all, defaults, &panels))

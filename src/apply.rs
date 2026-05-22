@@ -4,6 +4,7 @@
 use crate::manifest::Launcher;
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -189,3 +190,110 @@ fn set_exec(p: &Path) {
 }
 #[cfg(not(unix))]
 fn set_exec(_p: &Path) {}
+
+
+fn mark(ok: bool) -> char {
+    if ok { '✓' } else { '✗' }
+}
+
+/// Pull panel names out of a glance panels.toml (quoted tokens).
+fn parse_panel_names(p: &Path) -> Vec<String> {
+    let text = std::fs::read_to_string(p).unwrap_or_default();
+    let mut out = Vec::new();
+    let mut in_q = false;
+    let mut buf = String::new();
+    for c in text.chars() {
+        if c == '"' {
+            if in_q {
+                out.push(std::mem::take(&mut buf));
+            }
+            in_q = !in_q;
+        } else if in_q {
+            buf.push(c);
+        }
+    }
+    out
+}
+
+/// Read-only health check: PATH, per-launcher install + deps, glance config.
+pub fn doctor(m: &crate::manifest::Manifest) -> Result<()> {
+    let bin = bin_dir();
+    println!("rsuite doctor\n");
+
+    let on_path = std::env::var_os("PATH")
+        .map(|p| std::env::split_paths(&p).any(|d| d == bin))
+        .unwrap_or(false);
+    println!("  [{}] ~/.local/bin on $PATH", mark(on_path));
+    println!("  [{}] cargo available", mark(which("cargo").is_some()));
+
+    println!("\nLaunchers:");
+    for l in &m.launchers {
+        let inst = bin.join(&l.bin).is_file();
+        let miss: Vec<&str> = l.requires.iter().map(|s| s.as_str()).filter(|r| which(r).is_none()).collect();
+        let needs = if miss.is_empty() { String::new() } else { format!("  needs: {}", miss.join(", ")) };
+        println!(
+            "  [{}] {:<8} {}{}",
+            mark(inst),
+            l.name,
+            if inst { "installed" } else { "not installed" },
+            needs
+        );
+    }
+
+    println!("\nGlance config:");
+    let cfg = config_dir().join("glance/panels.toml");
+    if cfg.is_file() {
+        let names = parse_panel_names(&cfg);
+        let known: HashSet<&str> = m.panels.iter().map(|p| p.name.as_str()).collect();
+        let unknown: Vec<&str> = names.iter().map(|s| s.as_str()).filter(|n| !known.contains(n)).collect();
+        println!("  [{}] {} ({} panels)", mark(true), cfg.display(), names.len());
+        if !unknown.is_empty() {
+            println!("  [!] unknown panels: {}", unknown.join(", "));
+        }
+    } else {
+        println!("  [!] no panels.toml — glance shows its default registry");
+    }
+    Ok(())
+}
+
+/// Rebuild + reinstall every launcher currently recorded in installed.toml.
+pub fn update(m: &crate::manifest::Manifest) -> Result<()> {
+    let installed = load_installed();
+    let names: HashSet<String> = installed.bin.iter().map(|r| r.name.clone()).collect();
+    let launchers: Vec<Launcher> = m.launchers.iter().filter(|l| names.contains(&l.bin)).cloned().collect();
+    if launchers.is_empty() {
+        println!("nothing installed to update (run `rsuite` first).");
+        return Ok(());
+    }
+    println!("updating {} installed launcher(s)...", launchers.len());
+    run(&Plan { launchers, panels: Vec::new(), dry_run: false })
+}
+
+/// Remove every bin we installed (per installed.toml); only deletes ELF files we
+/// recorded, never a stray wrapper. With `remove_config`, also drops panels.toml.
+pub fn uninstall(remove_config: bool) -> Result<()> {
+    let mut installed = load_installed();
+    if installed.bin.is_empty() {
+        println!("nothing recorded as installed.");
+    }
+    for r in &installed.bin {
+        let p = PathBuf::from(&r.path);
+        if p.is_file() && is_elf(&p) {
+            std::fs::remove_file(&p).ok();
+            println!("  removed {}", r.path);
+        } else if p.is_file() {
+            eprintln!("  ! left {} (not an ELF we recognize)", r.path);
+        }
+    }
+    installed.bin.clear();
+    save_installed(&installed);
+    if remove_config {
+        let cfg = config_dir().join("glance/panels.toml");
+        if cfg.is_file() {
+            std::fs::remove_file(&cfg).ok();
+            println!("  removed {}", cfg.display());
+        }
+    }
+    println!("done.");
+    Ok(())
+}
