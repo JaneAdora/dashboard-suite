@@ -121,8 +121,8 @@ Reads `~/projects/.dashboard-roadmap.md` and renders the suite as a navigable vi
 
 glance ships as one binary; new visualizations are added as Panel-trait impls registered in `default_registry()`. Status is per-panel inside this binary.
 
-**Built (23 panels, as of 2026-05-20):**
-`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `peon` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `water` `mascot` `starfield` `launchers`
+**Built (22 panels, as of 2026-05-23):**
+`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `health` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `mascot` `starfield` `launchers`
 (plus `battery` — built but unregistered; no battery on the dev box. One-line registry edit to enable on a laptop.)
 
 Notes on what shipped:
@@ -131,7 +131,7 @@ Notes on what shipped:
 - `alerts` — NWS active weather alerts, severity-colored cards.
 - `hurricane` — NHC Atlantic-basin storms on a Map widget, off-season message.
 - `solar` — sun-position arc with NOAA sunrise equation, golden-hour highlights. (This was the roadmap's `sun`.)
-- `water` — local glasses tracker, `+`/`-`/`R` keys, midnight rollover. A single-activity prototype of `health`.
+- `water` — retired 2026-05-23; folded into `health` (the goals tracker it prototyped).
 - `mascot` — rotating hand-drawn pixel-art creature (6 poses). Pure decoration.
 - `launchers` — suite menu tile: a 16-row palette (every launcher + its hotkey) over live cards for `gst`/`clip`/`proc` (each polls `<bin> --summary --json` every 60s). Palette hotkeys copy the launcher name to the clipboard (OSC 52 + wl-copy); `proc`/`note` use `[P]`/`[N]` because lowercase `p`/`n` are the global panel-cycle keys.
 
@@ -140,7 +140,7 @@ Infrastructure shipped alongside: brightness control (`[`/`]`), tab-strip header
 ### glance UI sweep backlog
 
 Polish items to batch into a dedicated pass over panel layouts (not blocking):
-- `water` — center the progress bar in the true vertical middle and refine the bar/text balance. Bar was moved above the text 2026-05-20 as a quick pass; revisit for exact centering and spacing.
+- ~~`water` — center the progress bar~~ moot: `water` retired into `health` (2026-05-23).
 
 ### roam backlog
 
@@ -155,7 +155,10 @@ Found while reviewing the launchers spec on mobile (2026-05-20):
 
 ## Still on the roadmap
 
-### `health` — Custom goals tracker (REPLACES `peon`, absorbs `water`)
+### ✅ `health` — Custom goals tracker — SHIPPED 2026-05-23 (standalone binary + glance panel)
+Shipped as a glance lib+bin: shared `HealthCore` (config + append-only `health.jsonl` + four views + typed-count log state machine) wraps into both a `health` glance panel and a standalone `health` tile binary. Retired `peon` + `water` with a one-time data-only migration; added `Panel::wants_keys` so the panel captures typed counts. Starter goals: pushups 10, squats 10, bike 30 min, walking 30 min, water 8 glasses. Today total = mean of capped per-activity %; streak = consecutive all-met days. Original scope below for reference:
+
+### `health` — original design notes (REPLACES `peon`, absorbs `water`)
 Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squats, single daily goal each). Expand into a full goals system **owned by glance**:
 - **Configurable goals** in `~/.config/glance/health.toml`: arbitrary activities (pushups, squats, miles walked, minutes meditated, glasses of water), daily goal, unit string, optional weekly target.
 - **Inline logging** via a key mode (`+` → pick activity → type count → enter). No shell trip to log.
@@ -292,7 +295,7 @@ Remaining launcher binaries (separate repos):
 - `tasks` *(tile)* — Monday.com via skai + local file, **write-back** semantics, completion. ~350 lines + integration.
 
 ### Tier 5 — Flagship (own design pass before building)
-- `health` — config schema + inline log-entry key mode + multi-day persistence + multi-view toggle + peon/water migration. ~400 lines. The highest-leverage remaining item: you'd use it daily, and it retires two existing panels.
+- ✅ `health` — SHIPPED 2026-05-23. Config schema + inline log-entry key mode + multi-day persistence + multi-view toggle + peon/water migration, as a glance lib+bin (standalone `health` binary + `health` panel). Retired peon + water.
 - `atlas` *(meta binary)* — parse this markdown roadmap, three view modes (Kanban / Wave / Network-graph via Canvas), action menu, file-watch. ~450 lines. Most complex single thing; depends on the roadmap doc staying structured.
 - `rsuite` *(packaging/installer + meta-CLI)* — picker + apply + bootstrap + full verb set + shared `theme.toml` ✅ (2026-05-21) + per-component install prefix ✅ (2026-05-22); remaining: prebuilt/Termux releases. See "Packaging, installer & user config".
 

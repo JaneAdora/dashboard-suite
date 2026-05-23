@@ -84,6 +84,16 @@ requires = []
 default = true
 
 # --- glance panels (generated from glance ALL_PANELS) ---
+[[launcher]]
+name = "health"
+summary = "goals tracker (standalone tile)"
+repo = "glance"
+package = "glance"
+artifact = "health"
+bin = "health"
+requires = []
+default = false
+
 [[panel]]
 name = "cpu"
 summary = "CPU sparklines + top procs"
@@ -155,8 +165,8 @@ summary = "commit heatmap"
 default = true
 
 [[panel]]
-name = "peon"
-summary = "pushup/squat tracker"
+name = "health"
+summary = "configurable goals tracker (replaces peon + water)"
 default = true
 
 [[panel]]
@@ -203,11 +213,6 @@ default = true
 [[panel]]
 name = "solar"
 summary = "sun position"
-default = true
-
-[[panel]]
-name = "water"
-summary = "water tracker"
 default = true
 
 [[panel]]
