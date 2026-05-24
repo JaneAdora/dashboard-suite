@@ -121,8 +121,8 @@ Reads `~/projects/.dashboard-roadmap.md` and renders the suite as a navigable vi
 
 glance ships as one binary; new visualizations are added as Panel-trait impls registered in `default_registry()`. Status is per-panel inside this binary.
 
-**Built (22 panels, as of 2026-05-23):**
-`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `health` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `mascot` `starfield` `launchers`
+**Built (23 panels, as of 2026-05-23):**
+`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `health` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `mascot` `starfield` `launchers` `crew`
 (plus `battery` — built but unregistered; no battery on the dev box. One-line registry edit to enable on a laptop.)
 
 Notes on what shipped:
@@ -182,6 +182,7 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 
 ### Suite: launchers + companion (dual-form: standalone binary + glance panel)
 Shared `launcher-core` crate (theme, list + scroll `Selection`, OSC 52, filter, `--summary --json` envelope) under `~/projects/launchers`; each launcher is a thin binary over it plus a glance palette/card entry. The glance `launchers` panel is the panel form (see above).
+- ✅ **Built (2026-05-23):** `crew` — live view of background Claude Code sessions (reads `~/.claude/jobs/*/state.json`); standalone launcher + glance panel. `d` resumes with `--dangerously-skip-permissions` (binary: print+exit for `eval "$(crew)"`; panel: tmux new-window), `c` copies, `f` filters to live.
 - ✅ **Built (2026-05-20):** `gst` (git status/log), `clip` (clipboard ring, wraps `cliphist`), `1p` (1Password, crate `onepw`), `proc` (process killer). Plus the pre-existing OG launchers `roam` (dir nav), `wt` (worktrees), `recall` (cc-session browser) — all wired into the glance palette.
 - **Companion:** `mm`, Miss Minutes. A bash toggle exists (`~/.local/bin/mm` -> `~/Projects/tinker/miss-minutes/scripts/mm`) and is in the palette; the Rust animated version + `missminutes` glance panel are still to build.
 - **Remaining action launchers:** `ssh` (host picker), `note` (journal), `gh` (PR triage), `port` (listening ports), plus audit candidates `docker`, `svc`, `hub`, `agent`.

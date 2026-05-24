@@ -94,6 +94,16 @@ bin = "health"
 requires = []
 default = false
 
+[[launcher]]
+name = "crew"
+summary = "background Claude Code sessions (live view)"
+repo = "glance"
+package = "glance"
+artifact = "crew"
+bin = "crew"
+requires = []
+default = false
+
 [[panel]]
 name = "cpu"
 summary = "CPU sparklines + top procs"
@@ -167,6 +177,11 @@ default = true
 [[panel]]
 name = "health"
 summary = "configurable goals tracker (replaces peon + water)"
+default = true
+
+[[panel]]
+name = "crew"
+summary = "background Claude Code sessions"
 default = true
 
 [[panel]]
