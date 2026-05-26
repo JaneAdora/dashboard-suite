@@ -2,7 +2,7 @@
 
 Living roadmap for the suite of Rust/ratatui terminal widgets (`wt` / `recall` / `roam` / …) for tiled terminal dashboards, Termux, and SSH-from-mobile use cases.
 
-**Last updated:** 2026-05-21
+**Last updated:** 2026-05-26
 
 Originally extracted from `~/.claude/plans/jolly-crunching-teacup.md` (the roam design doc) on 2026-05-19. Maintain this file directly going forward.
 
@@ -57,8 +57,8 @@ These don't fit the action-launcher mold. They sit in a tmux pane and refresh on
 #### 10. `cal` — Calendar agenda tile
 Today + upcoming events on one screen. Single-key `j` join meeting (copy Meet/Zoom URL via OSC 52, opt-in toast with `o` exits with `xdg-open <url>`), `n` next 7 days view, `r` refresh, `q` quit. Color today's events in pink, tomorrow+ in lavender. **Data source:** skai MCP (`skai_calendar_today`, `skai_calendar_upcoming`) — already wired and authed. Fallback: zele's `calendar_intel.py` direct invocation.
 
-#### 11. `tasks` — Unified task list tile
-Two sources, single view: Monday.com tasks assigned to Jane (via skai's `skai_my_work`) + local `~/vaults/sops/todo.md` (or configurable path). Renders as flat list with a source-glyph prefix (`◆` Monday, `·` local). Single-key `c` complete (writes back to source — Monday via API, local via markdown rewrite), `s` snooze 1d, `n` new task (prompts), `e` open source file in $EDITOR. **Data source:** skai MCP + filesystem. Completion semantics differ per source — explicit in design.
+#### 11. `worklist` — Unified work-todo tile *(renamed from `tasks` on 2026-05-26 — that name now belongs to the Claude Code task viewer shipped 2026-05-25; original brief retained)*
+Two sources, single view: Monday.com tasks assigned to Jane (via skai's `skai_my_work`) + local `~/vaults/sops/todo.md` (or configurable path). Renders as flat list with a source-glyph prefix (`◆` Monday, `·` local). Single-key `c` complete (writes back to source — Monday via API, local via markdown rewrite), `s` snooze 1d, `n` new task (prompts), `e` open source file in $EDITOR. **Data source:** skai MCP + filesystem. Completion semantics differ per source — explicit in design. Open question: now that `tasks` covers Claude Code's task store, consider folding Monday + local into a single `worklist` tile, or merging into `cal` as a "today's plate" view.
 
 #### 12. `glance` — Multi-panel system + life dashboard (replaces 10 separate viz widgets)
 
@@ -121,7 +121,7 @@ Reads `~/projects/.dashboard-roadmap.md` and renders the suite as a navigable vi
 
 glance ships as one binary; new visualizations are added as Panel-trait impls registered in `default_registry()`. Status is per-panel inside this binary.
 
-**Built (24 panels, as of 2026-05-25):**
+**Built (24 panels, as of 2026-05-26):**
 `cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `health` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `mascot` `starfield` `launchers` `crew` `tasks`
 (plus `battery` — built but unregistered; no battery on the dev box. One-line registry edit to enable on a laptop.)
 
@@ -182,7 +182,7 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 
 ### Suite: launchers + companion (dual-form: standalone binary + glance panel)
 Shared `launcher-core` crate (theme, list + scroll `Selection`, OSC 52, filter, `--summary --json` envelope) under `~/projects/launchers`; each launcher is a thin binary over it plus a glance palette/card entry. The glance `launchers` panel is the panel form (see above).
-- ✅ **Built (2026-05-25):** `tasks` — cross-session viewer + editor for `~/.claude/tasks/<sid>/<id>.json`. Standalone bin + glance panel. `space` cycles status, `n` creates, `xx` deletes; `o`/`Tab` collapses sessions, `c` shows completed, `s` filters to session, `/` substring filter. Store uses `fs2::FileExt::lock_exclusive` on Claude Code's persistent `.lock`; writes are atomic via temp+rename. Session labels read from the first `cwd` field in `~/.claude/projects/<slug>/<sid>.jsonl`.
+- ✅ **Built 2026-05-25, polished 2026-05-26:** `tasks` — cross-session viewer + editor for `~/.claude/tasks/<sid>/<id>.json`. Standalone bin + glance panel. Default focus lands on the first task of the newest session. Keys: `space` cycles status, `n` creates, `xx` deletes within 2s, `h`/`l` (and Left/Right) drill in/out (header → task → detail modal → back), `o`/`Tab` toggles expand, `d` shows completed, `s` filters to focused session, `/` substring filter on subject, `c` copies the focused task's full detail to clipboard as plain text (paste into a Claude prompt), `R` exits with `cd '<cwd>' && claude --resume <sid>` on clipboard AND stdout (for `eval "$(tasks)"`). Detail modal shows the session uuid as a dim subtitle. Sessions with all-completed tasks hidden by default. Store uses `fs2::FileExt::lock_exclusive` on Claude Code's persistent `.lock`; writes are atomic via temp+rename. Session labels (and full cwd, cached for `R`) read from the first `cwd` field in the first 20 lines of `~/.claude/projects/<slug>/<sid>.jsonl`.
 - ✅ **Built (2026-05-23):** `crew` — live view of background Claude Code sessions (reads `~/.claude/jobs/*/state.json`); standalone launcher + glance panel. `d` resumes with `--dangerously-skip-permissions` (binary: print+exit for `eval "$(crew)"`; panel: tmux new-window), `c` copies, `f` filters to live.
 - ✅ **Built (2026-05-20):** `gst` (git status/log), `clip` (clipboard ring, wraps `cliphist`), `1p` (1Password, crate `onepw`), `proc` (process killer). Plus the pre-existing OG launchers `roam` (dir nav), `wt` (worktrees), `recall` (cc-session browser) — all wired into the glance palette.
 - **Companion:** `mm`, Miss Minutes. A bash toggle exists (`~/.local/bin/mm` -> `~/Projects/tinker/miss-minutes/scripts/mm`) and is in the palette; the Rust animated version + `missminutes` glance panel are still to build.
@@ -294,7 +294,7 @@ Remaining launcher binaries (separate repos):
 - `activity-clock` — same skai-bridge issue + radial Canvas arc layout math. ~280 lines.
 - `standup` — multi-source aggregation (git + cc-session-index + calendar) + summarization. ~300 lines.
 - `gh` *(launcher)* — full GitHub PR triage, checkout, multiple views. ~300 lines.
-- `tasks` *(tile)* — Monday.com via skai + local file, **write-back** semantics, completion. ~350 lines + integration.
+- `worklist` *(tile, renamed from `tasks` 2026-05-26)* — Monday.com via skai + local file, **write-back** semantics, completion. ~350 lines + integration.
 
 ### Tier 5 — Flagship (own design pass before building)
 - ✅ `health` — SHIPPED 2026-05-23. Config schema + inline log-entry key mode + multi-day persistence + multi-view toggle + peon/water migration, as a glance lib+bin (standalone `health` binary + `health` panel). Retired peon + water.
@@ -321,7 +321,7 @@ Remaining launcher binaries (separate repos):
 `roam` ✅ → `gst` ✅ → `ssh` → `note` → `clip` ✅
 
 **Wave 2 — tiles** (introduces the new event loop pattern):
-`cal` (smallest tile, validates pattern) → `tasks` → `glance` (the big one, but trait-based so panels can be added incrementally — ship with 3-4 panels, grow from there)
+`cal` (smallest tile, validates pattern) → `worklist` (Monday + local; was planned as `tasks`, renamed 2026-05-26) → `glance` ✅ (the big one, trait-based; ships incrementally)
 
 **Wave 3 — auth-gated launchers**:
 `net` (could go earlier — partial tile too) → `1p` (built) → `gh`
