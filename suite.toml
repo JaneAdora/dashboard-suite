@@ -104,6 +104,16 @@ bin = "crew"
 requires = []
 default = false
 
+[[launcher]]
+name = "tasks"
+summary = "Claude Code task viewer + editor (cross-session)"
+repo = "glance"
+package = "glance"
+artifact = "tasks"
+bin = "tasks"
+requires = []
+default = false
+
 [[panel]]
 name = "cpu"
 summary = "CPU sparklines + top procs"
@@ -182,6 +192,11 @@ default = true
 [[panel]]
 name = "crew"
 summary = "background Claude Code sessions"
+default = true
+
+[[panel]]
+name = "tasks"
+summary = "Claude Code tasks (cross-session)"
 default = true
 
 [[panel]]
