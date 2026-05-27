@@ -1,3 +1,10 @@
+---
+type: plan
+title: atlas-design
+status: shipped
+progress: 100
+---
+
 # atlas: Flagship TUI Reader for Plans, Roadmaps, and Tasks
 
 **Status:** Design approved 2026-05-27. Implementation planning to follow.

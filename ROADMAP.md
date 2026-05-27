@@ -1,3 +1,9 @@
+---
+type: roadmap
+title: suite-roadmap
+status: active
+---
+
 # Dashboard Widget Suite Roadmap
 
 Living roadmap for the suite of Rust/ratatui terminal widgets (`wt` / `recall` / `roam` / …) for tiled terminal dashboards, Termux, and SSH-from-mobile use cases.
