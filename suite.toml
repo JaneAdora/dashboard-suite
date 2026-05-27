@@ -105,6 +105,16 @@ requires = []
 default = false
 
 [[launcher]]
+name = "cal"
+summary = "Google Calendar agenda (today + week)"
+repo = "glance"
+package = "glance"
+artifact = "cal"
+bin = "cal"
+requires = ["python3", "op"]
+default = false
+
+[[launcher]]
 name = "tasks"
 summary = "Claude Code task viewer + editor (cross-session)"
 repo = "glance"
@@ -192,6 +202,11 @@ default = true
 [[panel]]
 name = "crew"
 summary = "background Claude Code sessions"
+default = true
+
+[[panel]]
+name = "cal"
+summary = "today + upcoming calendar events"
 default = true
 
 [[panel]]
