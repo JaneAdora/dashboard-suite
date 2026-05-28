@@ -8,7 +8,11 @@ status: active
 
 Living roadmap for the suite of Rust/ratatui terminal widgets (`wt` / `recall` / `roam` / …) for tiled terminal dashboards, Termux, and SSH-from-mobile use cases.
 
-**Last updated:** 2026-05-26
+**Last updated:** 2026-05-28
+
+**Recently shipped:**
+- ✅ `atlas` — Plan-shaped markdown reader (2026-05-27, lib+bin, 29 tasks; broader than the original "suite roadmap visualizer" concept). Lives at https://github.com/JaneAdora/atlas.
+- ✅ `mandalas` — Standalone animated mandala viewer for visual joy (2026-05-28, six animated styles + sidebar sliders + per-style presets). Lives at https://github.com/JaneAdora/mandalas.
 
 Originally extracted from `~/.claude/plans/jolly-crunching-teacup.md` (the roam design doc) on 2026-05-19. Maintain this file directly going forward.
 
@@ -100,7 +104,11 @@ r         force refresh now           q        quit
 - Lavender (`#c5a3ff`) — historical / averages / axis labels
 - Magenta (`#ff6ec7`) — alerts / peaks / "this number is bad"
 
-#### 13. `atlas` — Suite roadmap visualizer / navigator (self-referential)
+#### 13. `atlas` — Plan-shaped markdown reader ✅ SHIPPED 2026-05-27
+
+_Original brief below described a suite-roadmap visualizer. Shipped scope expanded to a general plan/roadmap/task markdown reader with library indexing, frontmatter-driven discovery, OSC 52 clipboard, hanging-indent wrap, and editorial palette. Lives at https://github.com/JaneAdora/atlas. The roadmap-visualizer angle remains on the table as a future mode._
+
+##### Original design
 
 Reads `~/projects/.dashboard-roadmap.md` and renders the suite as a navigable visualization. Sits in tile mode by default; Enter opens an action menu on the focused widget. Useful as a permanent "what's the suite at right now?" tile on the dashboard.
 
@@ -305,7 +313,8 @@ Remaining launcher binaries (separate repos):
 
 ### Tier 5 — Flagship (own design pass before building)
 - ✅ `health` — SHIPPED 2026-05-23. Config schema + inline log-entry key mode + multi-day persistence + multi-view toggle + peon/water migration, as a glance lib+bin (standalone `health` binary + `health` panel). Retired peon + water.
-- `atlas` *(meta binary)* — parse this markdown roadmap, three view modes (Kanban / Wave / Network-graph via Canvas), action menu, file-watch. ~450 lines. Most complex single thing; depends on the roadmap doc staying structured.
+- ✅ `atlas` — SHIPPED 2026-05-27 as a plan-shaped markdown reader (lib + bin, 29 tasks subagent-driven, hanging-indent wrap, editorial palette, indexed library with frontmatter discovery). https://github.com/JaneAdora/atlas. The original kanban/wave/network roadmap-visualizer concept remains open as a future atlas mode.
+- ✅ `mandalas` — SHIPPED 2026-05-28. Animated mandalas in the terminal, purely for visual joy. Six styles (Sacred Geometry / Lotus / Spirograph / Star Lattice / Flower of Life / Interlace) with bespoke per-style animation behaviour, sidebar slider controls (per-mandala + Common motion), per-style 9-slot preset pool with reset-on-slot-0. ratatui Canvas with Braille marker; truecolor required. ~1k lines. https://github.com/JaneAdora/mandalas.
 - `rsuite` *(packaging/installer + meta-CLI)* — picker + apply + bootstrap + full verb set + shared `theme.toml` ✅ (2026-05-21) + per-component install prefix ✅ (2026-05-22); remaining: prebuilt/Termux releases. See "Packaging, installer & user config".
 
 ### Cross-cutting note: the skai/MCP bridge
