@@ -8,9 +8,10 @@ status: active
 
 Living roadmap for the suite of Rust/ratatui terminal widgets (`wt` / `recall` / `roam` / …) for tiled terminal dashboards, Termux, and SSH-from-mobile use cases.
 
-**Last updated:** 2026-05-28
+**Last updated:** 2026-05-29
 
 **Recently shipped:**
+- ✅ **Suite maintenance pass (2026-05-29)** — zeroed all build warnings (glance 30→0, roam 2→0, wt 1→0), fixed the flaky cal test, completed roam's mtime column, and standardized release profiles (`strip` across the suite; LTO added to dashboard-suite). All 8 repos build clean; tests green (glance 117, recall 50, atlas 70, mandalas 34, wt 54, launcher-core 11).
 - ✅ `atlas` — Plan-shaped markdown reader (2026-05-27, lib+bin, 29 tasks; broader than the original "suite roadmap visualizer" concept). Lives at https://github.com/JaneAdora/atlas.
 - ✅ `mandalas` — Standalone animated mandala viewer for visual joy (2026-05-28, six animated styles + sidebar sliders + per-style presets). Lives at https://github.com/JaneAdora/mandalas.
 
@@ -139,7 +140,7 @@ glance ships as one binary; new visualizations are added as Panel-trait impls re
 `cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `health` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `mascot` `starfield` `launchers` `cal` `crew` `tasks` `standup`
 (plus `battery` — built but unregistered; no battery on the dev box. One-line registry edit to enable on a laptop.)
 
-**Known flaky test (cleanup item):** `cal::bridge::tests::cache_roundtrip_via_env_override` passes in isolation but intermittently fails (and the full suite occasionally hangs) under parallel `cargo test` due to env-var + shared-cache-file contention. Pre-existing, unrelated to standup. Fix: isolate the cache path per test (tempdir) and avoid the process-global env override, or mark it `#[serial]`. Surfaced 2026-05-28.
+**Flaky test — FIXED 2026-05-29:** `cal::bridge::tests::cache_roundtrip_via_env_override` intermittently failed (and the suite occasionally hung) under parallel `cargo test` due to process-global env-var (`GLANCE_CAL_CACHE`/`GLANCE_CAL_SHIM`) + shared-cache contention. Fixed by serializing the four env-mutating bridge tests behind a shared, poison-tolerant `ENV_LOCK: Mutex<()>` (no new dep). 117 lib tests now pass; cal::bridge passed 5/5 stress runs. Surfaced 2026-05-28.
 
 Notes on what shipped:
 - `clock` — big block-digit clock, 12/24 toggle (`f`), TZ + ISO week + day-progress gauge. Vertically centered.
@@ -161,6 +162,7 @@ Polish items to batch into a dedicated pass over panel layouts (not blocking):
 ### roam backlog
 
 Found while reviewing the launchers spec on mobile (2026-05-20):
+- ✅ mtime column shipped (2026-05-29): finished the long-wired name/size/mtime column design. `human_mtime()` renders compact relative age (`5m`/`3h`/`2d`/`4w`/`6mo`/`1y`) at width ≥60, where the layout already set `show_mtime=true`. `Entry.mtime` had been populated in `fs.rs` but never displayed; completing the render cleared the dead-code warning by making the feature real.
 - File previewer: full-screen modal is full-width + wraps (2026-05-21); `.md` renders styled (headings, bold/italic, code, lists, quotes, rules) and code is syntax-highlighted (js/ts/jsx/tsx/json/css/scss/less, python, + html/xml/vue/svelte) in both pane and modal. Also `roam <file>` opens that file's folder and jumps straight to its (styled) preview (2026-05-21).
 - ✅ Recursive find shipped (2026-05-21): `R` walks the cwd to depth 3 (hidden-aware, symlink-safe, capped at 1000), shows matches with relative-path names + a `[find 'q': N]` header indicator; `Esc` clears. `/` remains the current-dir jump-filter.
 - ✅ Folder + image previews shipped (2026-05-22): focusing a directory shows its contents (dirs-first, hidden-aware) in the right pane instead of a blank/binary message; image files (png/jpg/gif/webp/bmp) render as half-block art (`▀`, fg=upper / bg=lower pixel) directly in the pane, and the preview modal renders the same image at the modal's larger size for higher res. Decode-once cache (`thumbnail(1024)`, 30MB guard) keeps it snappy over SSH/tmux without graphics protocols.
