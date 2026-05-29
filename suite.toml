@@ -304,3 +304,8 @@ default = false
 name = "launchers"
 summary = "suite launcher menu"
 default = true
+
+[[panel]]
+name = "standup"
+summary = "today scoreboard (commits / sessions / meetings)"
+default = true
