@@ -135,9 +135,11 @@ Reads `~/projects/.dashboard-roadmap.md` and renders the suite as a navigable vi
 
 glance ships as one binary; new visualizations are added as Panel-trait impls registered in `default_registry()`. Status is per-panel inside this binary.
 
-**Built (25 panels, as of 2026-05-26):**
-`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `health` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `mascot` `starfield` `launchers` `cal` `crew` `tasks`
+**Built (26 panels, as of 2026-05-28):**
+`cpu` `mem` `net` `disk` `loadavg` `entropy` `fans` `ping` `commits` `health` `temp` `tsmap` `pet` `moon` `clock` `weather` `alerts` `hurricane` `solar` `mascot` `starfield` `launchers` `cal` `crew` `tasks` `standup`
 (plus `battery` — built but unregistered; no battery on the dev box. One-line registry edit to enable on a laptop.)
+
+**Known flaky test (cleanup item):** `cal::bridge::tests::cache_roundtrip_via_env_override` passes in isolation but intermittently fails (and the full suite occasionally hangs) under parallel `cargo test` due to env-var + shared-cache-file contention. Pre-existing, unrelated to standup. Fix: isolate the cache path per test (tempdir) and avoid the process-global env override, or mark it `#[serial]`. Surfaced 2026-05-28.
 
 Notes on what shipped:
 - `clock` — big block-digit clock, 12/24 toggle (`f`), TZ + ISO week + day-progress gauge. Vertically centered.
@@ -192,7 +194,7 @@ Big feature. Today's `peon` panel reads `peon-ping` trainer state (pushups + squ
 - `emails-per-day` — inbox volume BarChart, zele-driven
 - `activity-clock` — radial 24h clock with calendar event arcs (Canvas, skai cal)
 - ✅ `issues` — GitHub assigned-issues BarChart per repo (`gh search issues`). Built 2026-05-22, mirrors `prs`.
-- `standup` — auto-summary of today's git + claude + calendar activity
+- ✅ `standup` — today-scoreboard tile (today's commits across all repos / Claude Code sessions / meetings done+left+next, plus a yesterday line). SHIPPED 2026-05-28. Background git + session scan threads; reuses `CalCore` for meetings (added a persistent `last_fetch_error` flag for an honest "unavailable" row); DST-safe day boundaries; in-progress meetings count but the strictly-future event is shown as "next". Built subagent-driven (10 tasks, 14 tests). Enable via `rsuite add standup` or add to `panels.toml`.
 
 ### Suite: launchers + companion (dual-form: standalone binary + glance panel)
 Shared `launcher-core` crate (theme, list + scroll `Selection`, OSC 52, filter, `--summary --json` envelope) under `~/projects/launchers`; each launcher is a thin binary over it plus a glance palette/card entry. The glance `launchers` panel is the panel form (see above).
