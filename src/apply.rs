@@ -84,6 +84,53 @@ fn is_elf(p: &Path) -> bool {
     f.read_exact(&mut magic).is_ok() && &magic == b"\x7fELF"
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum GuardDecision {
+    /// Safe to install over (nothing there, or the suite already owns it).
+    Proceed,
+    /// Not ours and not an ELF: a user shell wrapper (the op-wrapper lesson) —
+    /// leave it untouched and skip installing this component.
+    Skip,
+    /// Not ours but an ELF: a same-named binary the user placed here. Preserve
+    /// it (rename to a backup) before installing ours over the path.
+    BackupThenInstall,
+}
+
+/// Decide how to treat an existing destination before installing over it.
+fn guard_decision(exists: bool, elf: bool, is_ours: bool) -> GuardDecision {
+    if !exists || is_ours {
+        GuardDecision::Proceed
+    } else if !elf {
+        GuardDecision::Skip
+    } else {
+        GuardDecision::BackupThenInstall
+    }
+}
+
+#[cfg(test)]
+mod guard_tests {
+    use super::{guard_decision, GuardDecision};
+
+    #[test]
+    fn proceeds_when_absent_or_ours() {
+        assert_eq!(guard_decision(false, false, false), GuardDecision::Proceed);
+        assert_eq!(guard_decision(true, true, true), GuardDecision::Proceed);
+        assert_eq!(guard_decision(true, false, true), GuardDecision::Proceed);
+    }
+
+    #[test]
+    fn skips_non_suite_non_elf() {
+        // op-wrapper lesson: never clobber a user's shell wrapper.
+        assert_eq!(guard_decision(true, false, false), GuardDecision::Skip);
+    }
+
+    #[test]
+    fn backs_up_non_suite_elf() {
+        // A user's same-named ELF binary must be preserved, not destroyed.
+        assert_eq!(guard_decision(true, true, false), GuardDecision::BackupThenInstall);
+    }
+}
+
 pub fn run(plan: &Plan) -> Result<()> {
     let projects = projects_dir();
     let bin = bin_dir();
@@ -129,12 +176,32 @@ pub fn run(plan: &Plan) -> Result<()> {
             bail!("{}: artifact missing at {}", l.name, artifact.display());
         }
         std::fs::create_dir_all(&dest_dir).ok();
-        // Clobber guard (the op-wrapper lesson): never overwrite a non-ELF file
-        // (e.g. a credential shell wrapper) that we did not install ourselves.
+        // Clobber guard (the op-wrapper lesson): protect files we did not install.
         let dest_s = dest.to_string_lossy().into_owned();
-        if dest.exists() && !is_elf(&dest) && !installed.bin.iter().any(|r| r.path == dest_s) {
-            eprintln!("  ! refusing to overwrite non-suite file {} (not an ELF binary)", dest.display());
-            continue;
+        let is_ours = installed.bin.iter().any(|r| r.path == dest_s);
+        match guard_decision(dest.exists(), is_elf(&dest), is_ours) {
+            GuardDecision::Skip => {
+                eprintln!("  ! refusing to overwrite non-suite file {} (not an ELF binary)", dest.display());
+                continue;
+            }
+            GuardDecision::BackupThenInstall => {
+                let bak = PathBuf::from(format!("{dest_s}.pre-suite.bak"));
+                match std::fs::rename(&dest, &bak) {
+                    Ok(()) => eprintln!(
+                        "  ! {} was not installed by the suite; backed it up to {}",
+                        dest.display(),
+                        bak.display()
+                    ),
+                    Err(e) => {
+                        eprintln!(
+                            "  ! refusing to overwrite non-suite binary {} (backup failed: {e})",
+                            dest.display()
+                        );
+                        continue;
+                    }
+                }
+            }
+            GuardDecision::Proceed => {}
         }
         std::fs::copy(&artifact, &dest).with_context(|| format!("install {}", dest.display()))?;
         set_exec(&dest);
