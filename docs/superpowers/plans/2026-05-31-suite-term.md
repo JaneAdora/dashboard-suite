@@ -10,7 +10,9 @@
 
 **Spec:** `docs/superpowers/specs/2026-05-30-suite-term-design.md` (v2).
 
-**Conventions for this repo set:** Commit messages use NO `Co-Authored-By` trailer (match repo convention). No em dashes in any prose. Each consumer installs to its existing location (`~/.cargo/bin` for wt/recall/roam/atlas/mandalas; `~/.local/bin` for the launcher binaries + glance + rsuite); reinstall after a successful migration. Never construct `op` (fork-bomb guard) — only `1p`.
+**Plan revision:** v2 (2026-06-01) folds in the plan review at `docs/superpowers/plans/2026-06-01-suite-term-plan-review.md` (all 7 findings adopted; see "Review resolution" at end).
+
+**Conventions for this repo set:** Commit messages use NO `Co-Authored-By` trailer (match repo convention). No em dashes in any prose. Reinstall each binary to EVERY location where it currently EXISTS (several live in both from prior installs). Before reinstalling, run `ls ~/.cargo/bin/<bin> ~/.local/bin/<bin>` and `install -m 0755 target/release/<bin>` to each path that already has it. Do NOT create a same-named binary in a directory it is not already in (no topology change). Current reality: roam/recall/atlas/mandalas are in BOTH; wt is in `~/.cargo/bin`; the launcher binaries + glance + rsuite are in `~/.local/bin`. Never construct `op` (fork-bomb guard) — only `1p`.
 
 **Definition of done for a migrated repo (acceptance checklist — verify ALL):**
 - [ ] No local OSC 52 encoder remains (uses `suite_term::clipboard`).
@@ -18,8 +20,19 @@
 - [ ] Every emitted shell command quotes ALL dynamic tokens (paths AND session ids), not just `cwd`.
 - [ ] Every local `wl-copy` spawn (including any delayed `--clear`) nulls stdout AND stderr, or routes through `wl_copy`/`wl_clear`.
 - [ ] Panic cleanup installs BEFORE terminal setup (or the repo uses an RAII guard, like launcher-core).
-- [ ] `cargo build --release` AND `cargo test` are BOTH warning-clean (test profile too — run `cargo test --no-run 2>&1 | grep -c '^warning'` and expect `0`).
+- [ ] Build AND tests PASS (gate on exit status, not on a grep) and are warning-clean in BOTH the release and test profiles. Use the Verification recipe below verbatim.
 - [ ] Public repos (roam/wt/atlas/mandalas): a fresh `git clone` into a temp dir builds (the git-dep resolves).
+
+### Verification recipe (use verbatim wherever a task says "acceptance checklist")
+
+A piped `grep -c` does NOT preserve Cargo's exit status (a build failure with no warnings still prints `0`), so gate on the direct runs first, then scan for warnings:
+```bash
+cargo build --release || { echo 'BUILD FAILED'; exit 1; }
+cargo test            || { echo 'TESTS FAILED'; exit 1; }
+[ "$(cargo build --release 2>&1 | grep -c '^warning')" = 0 ] || { echo 'release warnings'; exit 1; }
+[ "$(cargo test --no-run 2>&1 | grep -c '^warning')" = 0 ]   || { echo 'test-profile warnings'; exit 1; }
+```
+Only after all four pass: reinstall (per Conventions) and commit.
 
 ---
 
@@ -29,7 +42,7 @@
 - `Cargo.toml` — package + features + optional deps.
 - `src/lib.rs` — module declarations (feature-gated).
 - `src/quote.rs` — `shell_quote`, `quote_path` (+ tests). Always compiled.
-- `src/clipboard.rs` — `Osc52`, `osc52_sequence`, `emit_osc52`, `emit_osc52_to`, `wl_copy`, `wl_clear`, `copy` (+ tests). Feature `clipboard`.
+- `src/clipboard.rs` — `Osc52`, `osc52_sequence`, `emit_osc52`, `emit_osc52_to`, `wl_copy`, `wl_clear`, `wl_clear_after_secs`, `copy` (+ tests). Feature `clipboard`.
 - `src/panic.rs` — `install_panic_hook` (+ smoke test). Feature `panic-hook`.
 - `README.md` — one-paragraph purpose + usage snippet.
 
@@ -43,6 +56,7 @@
 
 **Files:**
 - Create: `~/projects/suite-term/Cargo.toml`
+- Create: `~/projects/suite-term/.gitignore`
 - Create: `~/projects/suite-term/src/lib.rs`
 - Create: `~/projects/suite-term/src/quote.rs`
 
@@ -64,6 +78,12 @@ panic-hook = ["crossterm"]
 base64 = { version = "0.22", optional = true }
 crossterm = { version = "0.28", optional = true }
 ```
+
+`~/projects/suite-term/.gitignore`:
+```
+/target/
+```
+(Commit `Cargo.lock` too: reproducible builds for the crate's own CI; consumers ignore a dependency's lockfile.)
 
 `~/projects/suite-term/src/lib.rs`:
 ```rust
@@ -154,8 +174,10 @@ Expected: `test result: ok. 6 passed`. (`--no-default-features` proves quote com
 - [ ] **Step 4: Commit**
 
 ```bash
-cd ~/projects/suite-term && git init -q && git add -A
-git commit -m "feat: suite-term scaffold + quote module"
+cd ~/projects/suite-term && git init -q
+git add -A
+git status --short | grep -q ' target/' && { echo 'ERROR: target/ staged, fix .gitignore'; exit 1; } || echo 'ok: target/ excluded'
+git commit -m "feat: suite-term scaffold + quote module (+ .gitignore)"
 ```
 
 ### Task 2: `clipboard` module
@@ -245,6 +267,20 @@ pub fn wl_clear() {
     use std::process::{Command, Stdio};
     let _ = Command::new("wl-copy")
         .arg("--clear")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+}
+
+/// Schedule a clear of the local Wayland clipboard after `secs` seconds, in a
+/// DETACHED child (via `sh`) so it survives the calling process exiting. stdin/
+/// stdout/stderr nulled. Used for secret auto-clear (onepw), where the launcher
+/// exits before the timer fires, so an in-process thread would never run.
+pub fn wl_clear_after_secs(secs: u64) {
+    use std::process::{Command, Stdio};
+    let _ = Command::new("sh")
+        .args(["-c", &format!("sleep {secs} && wl-copy --clear")])
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn();
@@ -382,7 +418,7 @@ git commit -m "feat: feature-gated panic hook (restores terminal, DisableMouseCa
 
 - [ ] **Step 1: Write `README.md`**
 
-```markdown
+````markdown
 # suite-term
 
 Shared TUI primitives for the dashboard widget suite. One source of truth for
@@ -391,13 +427,14 @@ the helpers that used to be copy-pasted (and drift) across every repo.
 - `quote` (always): `shell_quote` / `quote_path` for emitted `cd`/`eval` commands.
 - `clipboard` (feature, default): OSC 52 (`osc52_sequence`/`emit_osc52`/`copy`,
   capped at a UTF-8 char boundary) + best-effort `wl_copy`/`wl_clear` with
+  `wl_clear_after_secs` (detached) +
   stdout/stderr nulled.
 - `panic-hook` (feature): `install_panic_hook()` restores the terminal on panic.
 
 ```toml
 suite-term = { git = "https://github.com/JaneAdora/suite-term", rev = "<sha>", features = ["clipboard", "panic-hook"] }
 ```
-```
+````
 
 - [ ] **Step 2: Create the GitHub repo and push**
 
@@ -431,7 +468,7 @@ suite-term = { git = "https://github.com/JaneAdora/suite-term", rev = "<REV>", f
 ```rust
 //! Re-export of the shared clipboard. Kept as a module so existing
 //! `launcher_core::clipboard::...` call sites are unchanged.
-pub use suite_term::clipboard::{copy, emit_osc52, emit_osc52_to, osc52_sequence, wl_copy, wl_clear, Osc52, OSC52_CAP};
+pub use suite_term::clipboard::{copy, emit_osc52, emit_osc52_to, osc52_sequence, wl_copy, wl_clear, wl_clear_after_secs, Osc52, OSC52_CAP};
 ```
 Then fix callers of the OLD `osc52_sequence(&str) -> (String, bool)`: it now returns `Osc52`. In `exit.rs::finish`, change `let (seq, _truncated) = osc52_sequence(&cmd);` to `let seq = osc52_sequence(&cmd).sequence;`. Search the workspace: `grep -rn "osc52_sequence" ~/projects/launchers` and update each tuple destructure to use `.sequence` / `.truncated()`.
 
@@ -441,14 +478,15 @@ pub use suite_term::quote::shell_quote;
 ```
 Delete the local `shell_quote` fn and its `#[cfg(test)] mod tests` (the crate owns those tests now).
 
-- [ ] **Step 4: Route `clip` + `onepw` wl-copy through the crate.** In `clip/src/source.rs` replace the local `wl_copy` body and the cliphist-delete `wl-copy` usage with `suite_term::clipboard::wl_copy(...)`; in `onepw/src/app.rs` replace the `Command::new("wl-copy")` spawn with `suite_term::clipboard::wl_copy(s)` and the detached `sleep 30 && wl-copy --clear` with a thread that sleeps then calls `suite_term::clipboard::wl_clear()`. (Add `suite-term` to `clip/Cargo.toml` and `onepw/Cargo.toml` too.)
+- [ ] **Step 4: Route `clip` + `onepw` wl-copy through the crate.** In `clip/src/source.rs` replace the local `wl_copy` body with `suite_term::clipboard::wl_copy(text)`. (Its `delete()` uses `cliphist`, NOT wl-copy, and already nulls stdout/stderr from the 2026-05-29 audit, so leave `delete()` as-is.) In `onepw/src/app.rs` replace the `Command::new("wl-copy")` copy spawn with `suite_term::clipboard::wl_copy(s)`, and replace the detached `sh -c "sleep 30 && wl-copy --clear"` spawn with `suite_term::clipboard::wl_clear_after_secs(30)`. **This MUST remain a detached child:** `onepw::run()` returns (the process exits) when the user quits, so an in-process thread would be killed before the 30s timer fires and the secret would never clear. `wl_clear_after_secs` preserves the detached `sh -c sleep && wl-copy --clear` pattern with nulled stdio. Add `suite-term` to `clip/Cargo.toml` and `onepw/Cargo.toml`.
 
 - [ ] **Step 5: Verify (acceptance checklist) + commit + reinstall**
 ```bash
 cd ~/projects/launchers
-cargo build --release 2>&1 | grep -c '^warning'   # expect 0
-cargo test --no-run 2>&1 | grep -c '^warning'      # expect 0
-cargo test 2>&1 | grep "test result"               # all pass
+cargo build --release || { echo 'BUILD FAILED'; exit 1; }
+cargo test            || { echo 'TESTS FAILED'; exit 1; }
+[ "$(cargo build --release 2>&1 | grep -c '^warning')" = 0 ] || { echo 'release warnings'; exit 1; }
+[ "$(cargo test --no-run 2>&1 | grep -c '^warning')" = 0 ]   || { echo 'test-profile warnings'; exit 1; }
 for b in gst clip proc; do install -m 0755 target/release/$b ~/.local/bin/$b; done
 install -m 0755 target/release/onepw ~/.local/bin/1p
 git add -A && git commit -m "refactor: use suite-term for clipboard + shell_quote"
@@ -461,7 +499,7 @@ git add -A && git commit -m "refactor: use suite-term for clipboard + shell_quot
 
 - [ ] **Step 1: Add the dep** (`features = ["clipboard", "panic-hook"]`).
 - [ ] **Step 2: Clipboard.** Replace `src/clip.rs::copy` with a call to `suite_term::clipboard::copy`; replace `clip::b64`/local OSC52 with the crate. Update any caller that used the old return type.
-- [ ] **Step 3: Panic hook.** In `src/main.rs` and each `src/bin/*.rs` that calls `std::panic::set_hook`, replace the hook block with `suite_term::panic::install_panic_hook();`, placed BEFORE `enable_raw_mode()`.
+- [ ] **Step 3: Panic hook (also a fix, not just a refactor).** Install `suite_term::panic::install_panic_hook();` BEFORE `enable_raw_mode()` in `src/main.rs` AND in EVERY standalone TUI binary: `src/bin/cal.rs`, `src/bin/crew.rs`, `src/bin/tasks.rs`, `src/bin/health.rs`. `main.rs` has an existing `set_hook` block to replace; the four bins currently have NO panic hook (verified) yet enter raw mode + the alternate screen, so they carry roam's old vulnerability. ADD the hook to each.
 - [ ] **Step 4: Quoting.** In `src/crew/job.rs` and `src/bin/tasks.rs`, replace the inline `format!("cd '{}' && ...", c.replace('\'', "'\\''"), ...)` with `format!("cd {} && ...", suite_term::quote::shell_quote(c), ...)`, and ALSO wrap the resume id: `claude --resume {}` -> `claude --resume {}` with the id passed through `shell_quote`. Re-baseline the affected tests in `crew/job.rs` (lines ~203/225/230) and `crew/mod.rs` (~287) to expect the bare-normalized form for safe cwds (e.g. `cd /home/jane && ...` instead of `cd '/home/jane' && ...`); keep the apostrophe-path test expecting the quoted form.
 - [ ] **Step 5: Verify + commit + reinstall** (`install -m 0755 target/release/glance ~/.local/bin/glance`). Acceptance checklist; commit `refactor: use suite-term (clipboard/panic/quote)`.
 
@@ -483,7 +521,7 @@ git add -A && git commit -m "refactor: use suite-term for clipboard + shell_quot
 
 - [ ] **Step 1: Add the dep** (`features = ["clipboard", "panic-hook"]`).
 - [ ] **Step 2:** Replace `actions.rs::osc52_encode` + `copy_to_clipboard` (which returns `CopyResult`) with `suite_term::clipboard::emit_osc52`. Map the toast site: `CopyResult::Truncated { sent, total }` -> read `Osc52::truncated()` / `.sent_bytes` / `.total_bytes`. Replace `actions.rs::quote_path` with `suite_term::quote::quote_path`.
-- [ ] **Step 3:** Quote the resume id in `claude_command` (already quotes the path; pass the id through `shell_quote` too if it interpolates one).
+- [ ] **Step 3: (No extra quoting needed.)** roam's emitted commands (`cd_command` / `claude_command` / `shell_command` / `editor_command` / `tmux_new_window`) interpolate ONLY paths, all via `quote_path` (handled in Step 2). `claude_command(path, dangerous)` has NO resume-id parameter (verified), so there is no additional dynamic token to quote here.
 - [ ] **Step 3b:** Add the spec's consumer-level integration test (additional rec): a test that copying a multibyte string crossing `OSC52_CAP` reports exact `sent_bytes` (a few below the cap), not just `truncated == true`. Example: build a `"a".repeat(OSC52_CAP-1) + 'é'`, `emit_osc52` it (or `osc52_sequence`), assert `sent_bytes == OSC52_CAP-1` and `truncated()`.
 - [ ] **Step 4:** ADD `install_panic_hook()` in `main.rs` before terminal setup (roam currently has NO panic hook — this closes the gap the audit found).
 - [ ] **Step 5: Verify + commit + reinstall** to `~/.cargo/bin` and `~/.local/bin`. Confirm a standalone clone builds: `git clone ~/projects/roam /tmp/roam-clone && cd /tmp/roam-clone && cargo build --release` (the git-dep must resolve), then `rm -rf /tmp/roam-clone`.
@@ -533,3 +571,18 @@ suite-term = { git = "https://github.com/JaneAdora/suite-term", rev = "<REV>", d
 - The Phase 1 crate code is compile-verified across all four feature permutations (10 / 11 / 6 / 7 tests). If a test count differs, something diverged — stop and reconcile.
 - The one intentional behavior change is quote NORMALIZATION (recall + glance go from always-quoted to bare for safe paths). Those test re-baselines are expected, not regressions. Every other consumer's tests should pass unchanged or with only the clipboard return-type adaptation.
 - Do NOT leave a consumer on a stale `<REV>` if `suite-term` changed after that consumer was migrated; bump it.
+
+---
+
+## Review resolution (v2, 2026-06-01)
+
+Disposition of `2026-06-01-suite-term-plan-review.md`. All 7 findings were verified against current code and ADOPTED:
+
+- **#1 (.gitignore / build artifacts) - ADOPTED.** Task 1 now creates `.gitignore` (`/target/`) before any Cargo command, and Step 4 asserts `target/` is not staged. `Cargo.lock` is committed (reproducible crate CI; consumers ignore it).
+- **#2 (onepw detached clear) - ADOPTED (the critical one).** A thread dies when `onepw::run()` exits, so the secret would never clear. Added `wl_clear_after_secs(secs)` to the crate (spawns the detached `sh -c sleep && wl-copy --clear` with nulled stdio) and Task 5 Step 4 uses it; semantics preserved. Verified compiling.
+- **#3 (glance bins lack a hook) - ADOPTED.** Task 6 Step 3 installs the hook in `main.rs` AND every standalone bin (`cal`/`crew`/`tasks`/`health`), which have none today. Closes a real panic-corruption gap.
+- **#4 (verification can mask failures) - ADOPTED.** Added a Verification recipe that gates on Cargo's exit status before scanning for warnings; Task 5 and the acceptance checklist use it. (This is the exact `grep`-exit-status bug hit during the 2026-05-29 audit.)
+- **#5 (install-target self-contradiction) - ADOPTED.** Conventions now say reinstall to every location where the binary currently exists (checked via `ls`), matching on-disk reality, with no topology change.
+- **#6 (nested Markdown fences) - ADOPTED.** Task 4's README block uses a 4-backtick outer fence so the inner ```toml``` no longer closes it early.
+- **#7 (stale instructions) - ADOPTED.** Trimmed: `clip::delete` is cliphist (already stdio-clean), not wl-copy; `roam::claude_command` has no resume-id to quote.
+
