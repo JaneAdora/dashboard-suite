@@ -21,10 +21,12 @@ One command on a fresh Linux machine:
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/JaneAdora/dashboard-suite/main/install.sh | bash
 ```
 
-This installs Rust (via rustup, if needed), builds the `rsuite` picker, and
-launches it. `rsuite` clones the component repos you select into `~/projects`
-(clone URLs live in `suite.toml`) and builds them. Binaries install to
-`~/.local/bin` (and `~/.cargo/bin` for `wt` and `recall`).
+This installs Rust (via rustup, if needed), builds the `rsuite` picker, and runs
+it. Piped through `bash` the run is non-interactive, so it installs the default
+component set; run `rsuite` afterward in a terminal to pick components, or append
+`-s -- --all` to the curl line for everything. `rsuite` clones the component
+repos into `~/projects` (clone URLs live in `suite.toml`) and builds them.
+Binaries install to `~/.local/bin` (and `~/.cargo/bin` for `wt` and `recall`).
 
 Non-interactive and maintenance commands:
 

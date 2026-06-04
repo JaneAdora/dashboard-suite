@@ -152,9 +152,16 @@ fn clone_action(exists: bool, url: Option<&str>) -> CloneAction {
     }
 }
 
+/// A component `repo` must be a single bare directory name, so a hostile or
+/// misconfigured manifest cannot make us clone or build outside the projects dir.
+fn is_safe_repo_name(repo: &str) -> bool {
+    !matches!(repo, "" | "." | "..")
+        && repo.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+}
+
 #[cfg(test)]
 mod clone_tests {
-    use super::{clone_action, CloneAction};
+    use super::{clone_action, is_safe_repo_name, CloneAction};
 
     #[test]
     fn uses_existing_repo_regardless_of_url() {
@@ -171,6 +178,24 @@ mod clone_tests {
     fn skips_when_absent_without_url() {
         assert_eq!(clone_action(false, None), CloneAction::SkipNoUrl);
     }
+
+    #[test]
+    fn accepts_bare_repo_names() {
+        assert!(is_safe_repo_name("launchers"));
+        assert!(is_safe_repo_name("roam"));
+        assert!(is_safe_repo_name("suite-term"));
+    }
+
+    #[test]
+    fn rejects_traversal_and_separators() {
+        assert!(!is_safe_repo_name(""));
+        assert!(!is_safe_repo_name("."));
+        assert!(!is_safe_repo_name(".."));
+        assert!(!is_safe_repo_name("../etc"));
+        assert!(!is_safe_repo_name("/abs/path"));
+        assert!(!is_safe_repo_name("a/b"));
+        assert!(!is_safe_repo_name("has space"));
+    }
 }
 
 pub fn run(plan: &Plan) -> Result<()> {
@@ -180,11 +205,18 @@ pub fn run(plan: &Plan) -> Result<()> {
     if !plan.dry_run {
         std::fs::create_dir_all(&bin).ok();
     }
+    // Track repos already planned-to-clone so --dry-run previews each shared repo
+    // once (the live path dedupes naturally: the first clone creates the dir).
+    let mut planned_clones: HashSet<String> = HashSet::new();
 
     for l in &plan.launchers {
         let missing: Vec<&str> = l.requires.iter().map(|s| s.as_str()).filter(|r| which(r).is_none()).collect();
         if !missing.is_empty() {
             eprintln!("  ! {}: missing dependency: {}", l.name, missing.join(", "));
+        }
+        if !is_safe_repo_name(&l.repo) {
+            eprintln!("  ! {}: unsafe repo name {:?}; skipping", l.name, l.repo);
+            continue;
         }
         let repo = projects.join(&l.repo);
         match clone_action(repo.is_dir(), l.url.as_deref()) {
@@ -195,13 +227,21 @@ pub fn run(plan: &Plan) -> Result<()> {
             }
             CloneAction::Clone => {
                 let url = l.url.as_deref().unwrap_or_default();
+                // git reads a leading-dash positional as an option; refuse it and
+                // pass `--` so the url can never be smuggled in as a flag.
+                if url.starts_with('-') {
+                    bail!("{}: refusing clone url that looks like an option: {}", l.name, url);
+                }
                 if plan.dry_run {
-                    println!("  would clone {} -> {}", url, repo.display());
+                    if planned_clones.insert(l.repo.clone()) {
+                        println!("  would clone {} -> {}", url, repo.display());
+                    }
                 } else {
                     println!("==> cloning {} ({}) from {}", l.name, l.repo, url);
                     std::fs::create_dir_all(&projects).ok();
                     let status = Command::new("git")
                         .arg("clone")
+                        .arg("--")
                         .arg(url)
                         .arg(&repo)
                         .status()

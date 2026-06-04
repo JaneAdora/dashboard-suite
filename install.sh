@@ -15,7 +15,7 @@ if ! command -v git >/dev/null 2>&1; then
 fi
 
 if ! command -v cargo >/dev/null 2>&1; then
-  echo "rust toolchain not found — installing via rustup..."
+  echo "rust toolchain not found; installing via rustup..."
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 fi
 # Ensure ~/.cargo/bin is on PATH for THIS shell (wt/recall install there via a
@@ -41,7 +41,19 @@ if [ -n "$missing" ]; then
   echo "note: add $missing to your PATH, then restart your shell (or 'source ~/.cargo/env')."
 fi
 
-# Launch the picker unless asked not to.
-if [ "${1:-}" != "--no-run" ]; then
+# Launch rsuite. An explicit arg (e.g. --defaults / --all) is forwarded as-is.
+# With no arg, the interactive picker needs a real terminal; under `curl | bash`
+# stdin is the pipe, not a tty, so install the default set non-interactively
+# instead of dropping into a picker that can never receive keypresses.
+case "${1:-}" in
+  --no-run) exit 0 ;;
+esac
+if [ "$#" -gt 0 ]; then
   exec "$HOME/.local/bin/rsuite" "$@"
+elif [ -t 0 ]; then
+  exec "$HOME/.local/bin/rsuite"
+else
+  echo "non-interactive install: installing the default component set."
+  echo "run 'rsuite' in a terminal to choose components, or 'rsuite --all' for everything."
+  exec "$HOME/.local/bin/rsuite" --defaults
 fi
