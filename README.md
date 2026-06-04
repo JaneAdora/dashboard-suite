@@ -11,6 +11,15 @@ The widgets themselves live in their own repos:
 
 ## Contents
 - `ROADMAP.md` — living roadmap, built panels + backlog + difficulty tiers.
+- `scripts/check-suite.sh` — runs fmt/test/clippy health checks across the eight suite repos.
 
 `atlas` (planned) parses `ROADMAP.md` to render suite status. Keep the
 doc's heading structure intact so atlas can parse it.
+
+## Suite checks
+
+```bash
+scripts/check-suite.sh
+```
+
+By default this checks `suite-term`, `glance`, `wt`, `recall`, `roam`, `atlas`, `mandalas`, and `launchers` under `~/projects`. Override the project root with `RSUITE_PROJECTS=/path/to/projects`. Limit the check set with `SUITE_CHECKS="fmt test"`.
