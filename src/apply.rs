@@ -131,6 +131,48 @@ mod guard_tests {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum CloneAction {
+    /// Repo already present; build it in place.
+    UseExisting,
+    /// Repo absent but a clone URL is known; clone it first.
+    Clone,
+    /// Repo absent and no URL to clone from; skip this component.
+    SkipNoUrl,
+}
+
+/// Decide whether to build in place, clone first, or skip a component.
+fn clone_action(exists: bool, url: Option<&str>) -> CloneAction {
+    if exists {
+        CloneAction::UseExisting
+    } else if url.is_some() {
+        CloneAction::Clone
+    } else {
+        CloneAction::SkipNoUrl
+    }
+}
+
+#[cfg(test)]
+mod clone_tests {
+    use super::{clone_action, CloneAction};
+
+    #[test]
+    fn uses_existing_repo_regardless_of_url() {
+        assert_eq!(clone_action(true, Some("u")), CloneAction::UseExisting);
+        assert_eq!(clone_action(true, None), CloneAction::UseExisting);
+    }
+
+    #[test]
+    fn clones_when_absent_with_url() {
+        assert_eq!(clone_action(false, Some("u")), CloneAction::Clone);
+    }
+
+    #[test]
+    fn skips_when_absent_without_url() {
+        assert_eq!(clone_action(false, None), CloneAction::SkipNoUrl);
+    }
+}
+
 pub fn run(plan: &Plan) -> Result<()> {
     let projects = projects_dir();
     let bin = bin_dir();
@@ -145,9 +187,30 @@ pub fn run(plan: &Plan) -> Result<()> {
             eprintln!("  ! {}: missing dependency: {}", l.name, missing.join(", "));
         }
         let repo = projects.join(&l.repo);
-        if !repo.is_dir() {
-            eprintln!("  ! {}: repo not found at {} — skipping", l.name, repo.display());
-            continue;
+        match clone_action(repo.is_dir(), l.url.as_deref()) {
+            CloneAction::UseExisting => {}
+            CloneAction::SkipNoUrl => {
+                eprintln!("  ! {}: repo not found at {} and no clone url; skipping", l.name, repo.display());
+                continue;
+            }
+            CloneAction::Clone => {
+                let url = l.url.as_deref().unwrap_or_default();
+                if plan.dry_run {
+                    println!("  would clone {} -> {}", url, repo.display());
+                } else {
+                    println!("==> cloning {} ({}) from {}", l.name, l.repo, url);
+                    std::fs::create_dir_all(&projects).ok();
+                    let status = Command::new("git")
+                        .arg("clone")
+                        .arg(url)
+                        .arg(&repo)
+                        .status()
+                        .with_context(|| format!("git clone {url}"))?;
+                    if !status.success() {
+                        bail!("{}: git clone failed ({})", l.name, url);
+                    }
+                }
+            }
         }
         let artifact = repo.join("target/release").join(l.artifact());
         let dest_dir = launcher_bin_dir(l);

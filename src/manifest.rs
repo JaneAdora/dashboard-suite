@@ -31,6 +31,10 @@ pub struct Launcher {
     /// $HOME. Unset => the suite bin dir (~/.local/bin).
     #[serde(default)]
     pub prefix: Option<String>,
+    /// Clone URL for this component's repo; rsuite clones it under the projects
+    /// dir when the repo is absent, so a fresh machine can install from scratch.
+    #[serde(default)]
+    pub url: Option<String>,
 }
 
 impl Launcher {
@@ -92,5 +96,11 @@ mod tests {
             .launchers
             .iter()
             .any(|l| l.bin == "wt" && l.prefix.as_deref() == Some("~/.cargo/bin")));
+        // every component declares a clone URL so a fresh machine can fetch it
+        assert!(m.launchers.iter().all(|l| l.url.is_some()));
+        assert!(m
+            .launchers
+            .iter()
+            .any(|l| l.bin == "roam" && l.url.as_deref() == Some("https://github.com/JaneAdora/roam")));
     }
 }
