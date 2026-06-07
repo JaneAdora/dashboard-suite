@@ -136,6 +136,17 @@ bin = "tasks"
 requires = []
 default = false
 
+[[launcher]]
+name = "vitals"
+summary = "single-screen hardware cockpit"
+repo = "glance"
+url = "https://github.com/JaneAdora/glance"
+package = "glance"
+artifact = "vitals"
+bin = "vitals"
+requires = []
+default = false
+
 [[panel]]
 name = "cpu"
 summary = "CPU sparklines + top procs"
