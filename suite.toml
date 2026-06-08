@@ -147,6 +147,17 @@ bin = "vitals"
 requires = []
 default = false
 
+[[launcher]]
+name = "music"
+summary = "now-playing + MPRIS controls (standalone)"
+repo = "glance"
+url = "https://github.com/JaneAdora/glance"
+package = "glance"
+artifact = "music"
+bin = "music"
+requires = ["playerctl"]
+default = false
+
 [[panel]]
 name = "cpu"
 summary = "CPU sparklines + top procs"
